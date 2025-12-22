@@ -14,6 +14,9 @@ pub fn disassemble_chunk(chunk: &Chunk, name: &str) {
 
 fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
 	let byte = chunk.code[offset];
+
+	print!("{} ", offset);
+
 	match Op::try_from(byte) {
 		Ok(op) => match op {
 			Op::Return => simple_instruction("OP_RETURN", offset),
