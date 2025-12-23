@@ -1,5 +1,6 @@
 use crate::chunk::Chunk;
 use crate::chunk::Op;
+use crate::value::print_value;
 
 pub fn disassemble_chunk(chunk: &Chunk, name: &str) {
 	println!("== {} ==", name);
@@ -19,6 +20,7 @@ fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
 
 	match Op::try_from(byte) {
 		Ok(op) => match op {
+			Op::Constant => constant_instruction(chunk, offset),
 			Op::Return => simple_instruction("OP_RETURN", offset),
 		},
 		_ => {
@@ -26,6 +28,15 @@ fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
 			offset + 1
 		}
 	}
+}
+
+fn constant_instruction(chunk: &Chunk, offset: usize) -> usize {
+	let constant_position = chunk.code[offset + 1] as usize;
+	print!("{:<16} {:04} ", "OP_CONSTANT", constant_position);
+	let constant_value = chunk.constants.values[constant_position];
+	print_value(constant_value);
+	println!();
+	offset + 2
 }
 
 fn simple_instruction(name: &str, offset: usize) -> usize {
