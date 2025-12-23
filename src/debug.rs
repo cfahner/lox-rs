@@ -17,6 +17,11 @@ fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
 	let byte = chunk.code[offset];
 
 	print!("{:04} ", offset);
+	if offset > 0 && chunk.lines[offset] == chunk.lines[offset - 1] {
+		print!("   | ");
+	} else {
+		print!("{:04} ", chunk.lines[offset]);
+	}
 
 	match Op::try_from(byte) {
 		Ok(op) => match op {
