@@ -9,9 +9,9 @@ fn main() {
 	let mut chunk = Chunk::new();
 
 	let const_position = chunk.add_constant(1.2);
-	chunk.write(Op::Constant as u8);
-	chunk.write(const_position as u8);
+	chunk.write(Op::Constant as u8, 123);
+	chunk.write(const_position as u8, 123);
 
-	chunk.write(Op::Return as u8);
+	chunk.write(Op::Return as u8, 123);
 	debug::disassemble_chunk(&chunk, "test");
 }

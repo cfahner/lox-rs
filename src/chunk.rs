@@ -24,6 +24,8 @@ pub struct Chunk {
 
 	pub code: Vec<u8>,
 
+	pub lines: Vec<u32>,
+
 	pub constants: ValueArray,
 
 }
@@ -31,11 +33,16 @@ pub struct Chunk {
 impl Chunk {
 
 	pub fn new() -> Chunk {
-		Chunk { code: Vec::with_capacity(8), constants: ValueArray::new() }
+		Chunk {
+			code: Vec::with_capacity(8),
+			lines: Vec::with_capacity(8),
+			constants: ValueArray::new(),
+		}
 	}
 
-	pub fn write(&mut self, byte: u8) {
+	pub fn write(&mut self, byte: u8, line: u32) {
 		self.code.push(byte);
+		self.lines.push(line);
 	}
 
 	pub fn add_constant(&mut self, value: Value) -> usize {
