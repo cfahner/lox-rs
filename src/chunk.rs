@@ -31,7 +31,7 @@ pub struct Chunk {
 impl Chunk {
 
 	pub fn new() -> Chunk {
-		Chunk { code: vec![], constants: ValueArray::new() }
+		Chunk { code: Vec::with_capacity(8), constants: ValueArray::new() }
 	}
 
 	pub fn write(&mut self, byte: u8) {
