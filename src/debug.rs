@@ -36,12 +36,11 @@ fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
 }
 
 fn constant_instruction(chunk: &Chunk, offset: usize) -> usize {
-	let constant_position = chunk.code[offset + 1] as usize;
-	print!("{:<16} {:04} '", "OP_CONSTANT", constant_position);
-	let constant_value = chunk.constants.values[constant_position];
-	print_value(constant_value);
+	let constant = chunk.extract_constant(offset + 1);
+	print!("{:<16} '", "OP_CONSTANT");
+	print_value(constant.0);
 	println!("'");
-	offset + 2
+	constant.1
 }
 
 fn simple_instruction(name: &str, offset: usize) -> usize {
