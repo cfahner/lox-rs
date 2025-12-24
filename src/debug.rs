@@ -25,8 +25,9 @@ fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
 
 	match Op::try_from(byte) {
 		Ok(op) => match op {
-			Op::Constant => constant_instruction(chunk, offset),
+			Op::Constant => constant_instruction("OP_CONSTANT", chunk, offset),
 			Op::Return => simple_instruction("OP_RETURN", offset),
+			Op::ConstantLong => constant_instruction("OP_CONSTANT_LONG", chunk, offset),
 		},
 		_ => {
 			println!("Unknown opcode {}", byte);
@@ -35,9 +36,13 @@ fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
 	}
 }
 
-fn constant_instruction(chunk: &Chunk, offset: usize) -> usize {
-	let constant = chunk.extract_constant(offset + 1);
-	print!("{:<16} '", "OP_CONSTANT");
+fn constant_instruction(name: &str, chunk: &Chunk, offset: usize) -> usize {
+	let constant = if name == "OP_CONSTANT" {
+		chunk.extract_constant_short(offset + 1)
+	} else {
+		chunk.extract_constant_long(offset + 1)
+	};
+	print!("{:<16} '", name);
 	print_value(constant.0);
 	println!("'");
 	constant.1

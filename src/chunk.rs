@@ -3,11 +3,15 @@ use std::convert::TryFrom;
 use crate::value::Value;
 use crate::value::ValueArray;
 
-const LONG_CONSTANT_OFFSET_MASK: u32 = u32::MAX & (u32::MAX & (1 << 31));
+const MAX_CONSTANTS: usize = 0xffff_ffff_ffff;
 
 pub enum Op {
 	Constant = 0x00,
 	Return = 0x01,
+
+	// opcodes that are not part of the default set go below this line
+
+	ConstantLong = 0x02,
 }
 
 impl TryFrom<u8> for Op {
@@ -17,6 +21,7 @@ impl TryFrom<u8> for Op {
 		match value {
 			0x00 => Ok(Op::Constant),
 			0x01 => Ok(Op::Return),
+			0x02 => Ok(Op::ConstantLong),
 			_ => Err(()),
 		}
 	}
@@ -47,42 +52,38 @@ impl Chunk {
 		self.lines.push(line);
 	}
 
-	/// Writes a constant value into the chunk: i.e. an [Op::Constant] followed by an index
-	/// The index written is either 1 byte long (if <= 127) or 4 bytes long (if > 127)
-	/// Indices > 127 are encoded as a big-endian u31 in 4 bytes where the first bit is always 1
+	/// Writes a constant value into the chunk: either [Op::Constant] followed by a one byte index or
+	/// [Op::ConstantLong] followed by a three byte index
 	pub fn write_constant(&mut self, value: Value, line: u32) {
 		self.constants.write(value);
-		self.write(Op::Constant as u8, line);
 		let const_index = self.constants.values.len() - 1;
-		if const_index <= 127 {
+		if const_index > MAX_CONSTANTS {
+			panic!("Cannot write constant to chunk, maximum reached");
+		}
+		if const_index < u8::MAX as usize {
+			self.write(Op::Constant as u8, line);
 			self.write(const_index as u8, line);
 			return;
 		}
+		self.write(Op::ConstantLong as u8, line);
 		let bytes = const_index.to_be_bytes();
-		for i in 0..4 {
-			let mut byte = bytes[bytes.len() - i];
-			if i == 3 {
-				byte |= 1 << 7;
-			}
-			self.write(byte, line);
+		for i in 0..3 {
+			self.write(bytes[bytes.len() - i], line);
 		}
 	}
 
-	/// Assumes the given offset describes the location of a constant in the code and returns its value
-	/// Returns a tuple containing the value and the next code offset
-	pub fn extract_constant(&self, offset: usize) -> (Value, usize) {
-		let const_offset = self.code[offset];
-		if (0b_1000_0000 & const_offset) > 0 {
-			let const_offset_bytes: [u8;4] = [
-				self.code[offset],
-				self.code[offset + 1],
-				self.code[offset + 2],
-				self.code[offset + 3],
-			];
-			let long_const_offset = u32::from_be_bytes(const_offset_bytes) & LONG_CONSTANT_OFFSET_MASK;
-			return (self.constants.values[long_const_offset as usize], offset + 4);
-		}
-		(self.constants.values[const_offset as usize], offset + 1)
+	/// Returns a tuple containing the decoded value at the given offset and the next code offset
+	pub fn extract_constant_short(&self, offset: usize) -> (Value, usize) {
+		(self.constants.values[self.code[offset] as usize], offset + 1)
+	}
+
+	/// Returns a tuple containing the decoded value at the given offset and the next code offset
+	pub fn extract_constant_long(&self, offset: usize) -> (Value, usize) {
+		let const_index_bytes: [u8;4] = [
+			0, self.code[offset], self.code[offset + 1], self.code[offset + 2]
+		];
+		let const_index = u32::from_be_bytes(const_index_bytes);
+		(self.constants.values[const_index as usize], offset + 3)
 	}
 
 }
