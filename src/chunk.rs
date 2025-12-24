@@ -67,7 +67,7 @@ impl Chunk {
 		}
 		self.write(Op::ConstantLong as u8, line);
 		let bytes = const_index.to_be_bytes();
-		for i in 0..3 {
+		for i in 1..4 {
 			self.write(bytes[bytes.len() - i], line);
 		}
 	}
@@ -84,6 +84,28 @@ impl Chunk {
 		];
 		let const_index = u32::from_be_bytes(const_index_bytes);
 		(self.constants.values[const_index as usize], offset + 3)
+	}
+
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn write_constant_should_use_op_constant_long_when_exceeding_short_limit() {
+		let short_limit = u8::MAX as usize;
+		let mut chunk = Chunk::new();
+
+		for i in 0..(short_limit + 1) {
+			chunk.write_constant(1.0, i as u32);
+		}
+
+		// result should be 255 OP_CONSTANT's followed by 1 byte indices (510 bytes total)
+		// then a single OP_CONSTANT_LONG followed by a 3 byte index (4 bytes addition)
+		assert_eq!(chunk.code.len(), (short_limit * 2) + 4);
+		assert_eq!(chunk.constants.values.len(), short_limit + 1);
+		assert_eq!(chunk.code[chunk.code.len() - 4], Op::ConstantLong as u8);
 	}
 
 }
