@@ -28,7 +28,7 @@ pub struct Chunk {
 
 	pub lines: Vec<u32>,
 
-	pub constants: ValueArray,
+	constants: ValueArray,
 
 }
 
@@ -47,9 +47,25 @@ impl Chunk {
 		self.lines.push(line);
 	}
 
-	pub fn add_constant(&mut self, value: Value) -> usize {
+	/// Writes a constant value into the chunk: i.e. an [Op::Constant] followed by an index
+	/// The index written is either 1 byte long (if <= 127) or 4 bytes long (if > 127)
+	/// Indices > 127 are encoded as a big-endian u31 in 4 bytes where the first bit is always 1
+	pub fn write_constant(&mut self, value: Value, line: u32) {
 		self.constants.write(value);
-		self.constants.values.len() - 1
+		self.write(Op::Constant as u8, line);
+		let const_index = self.constants.values.len() - 1;
+		if const_index <= 127 {
+			self.write(const_index as u8, line);
+			return;
+		}
+		let bytes = const_index.to_be_bytes();
+		for i in 0..4 {
+			let mut byte = bytes[bytes.len() - i];
+			if i == 3 {
+				byte |= 1 << 7;
+			}
+			self.write(byte, line);
+		}
 	}
 
 	/// Assumes the given offset describes the location of a constant in the code and returns its value
