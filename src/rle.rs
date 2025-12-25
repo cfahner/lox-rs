@@ -17,7 +17,7 @@ impl<T: PartialEq> RunLengthEncoder<T> {
 
 	pub fn find(&self, position: usize) -> Option<&T> {
 		let mut lower_bound: usize = 0;
-		for tuple in self.values.iter() {
+		for tuple in &self.values {
 			let upper_bound = lower_bound + tuple.1 as usize;
 			if position >= lower_bound && position < upper_bound {
 				return Some(&tuple.0);
