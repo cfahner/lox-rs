@@ -1,5 +1,6 @@
 use std::convert::TryFrom;
 
+use crate::rle::RunLengthEncoder;
 use crate::value::Value;
 use crate::value::ValueArray;
 
@@ -31,7 +32,7 @@ pub struct Chunk {
 
 	pub code: Vec<u8>,
 
-	pub lines: Vec<u32>,
+	lines: RunLengthEncoder<u32>,
 
 	constants: ValueArray,
 
@@ -42,14 +43,21 @@ impl Chunk {
 	pub fn new() -> Chunk {
 		Chunk {
 			code: Vec::with_capacity(8),
-			lines: Vec::with_capacity(8),
+			lines: RunLengthEncoder::<u32>::new(),
 			constants: ValueArray::new(),
+		}
+	}
+
+	pub fn find_line(&self, offset: usize) -> Option<u32> {
+		match self.lines.find(offset) {
+			Some(v) => Some(*v),
+			None => None
 		}
 	}
 
 	pub fn write(&mut self, byte: u8, line: u32) {
 		self.code.push(byte);
-		self.lines.push(line);
+		self.lines.add(line);
 	}
 
 	/// Writes a constant value into the chunk: either [Op::Constant] followed by a one byte index or
@@ -106,6 +114,29 @@ mod tests {
 		assert_eq!(chunk.code.len(), (short_limit * 2) + 4);
 		assert_eq!(chunk.constants.values.len(), short_limit + 1);
 		assert_eq!(chunk.code[chunk.code.len() - 4], Op::ConstantLong as u8);
+	}
+
+	#[test]
+	fn find_line_should_return_line() {
+		let mut chunk = Chunk::new();
+		chunk.write(0u8, 1);
+		chunk.write(0u8, 1);
+		chunk.write(0u8, 1);
+		chunk.write(0u8, 2);
+
+		assert_eq!([
+			chunk.find_line(0).unwrap(),
+			chunk.find_line(1).unwrap(),
+			chunk.find_line(2).unwrap(),
+			chunk.find_line(3).unwrap(),
+		], [ 1, 1, 1, 2 ]);
+	}
+
+	#[test]
+	fn find_line_should_return_none_when_going_oob() {
+		let chunk = Chunk::new();
+
+		assert!(chunk.find_line(0).is_none());
 	}
 
 }

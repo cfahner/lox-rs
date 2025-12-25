@@ -17,10 +17,11 @@ fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
 	let byte = chunk.code[offset];
 
 	print!("{:04} ", offset);
-	if offset > 0 && chunk.lines[offset] == chunk.lines[offset - 1] {
+	let instruction_line = chunk.find_line(offset).unwrap();
+	if offset > 0 && instruction_line == chunk.find_line(offset - 1).unwrap() {
 		print!("   | ");
 	} else {
-		print!("{:04} ", chunk.lines[offset]);
+		print!("{:04} ", instruction_line);
 	}
 
 	match Op::try_from(byte) {

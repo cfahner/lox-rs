@@ -1,5 +1,6 @@
 mod chunk;
 mod debug;
+mod rle;
 mod value;
 
 use crate::chunk::Chunk;
