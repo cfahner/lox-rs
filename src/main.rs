@@ -2,14 +2,18 @@ mod chunk;
 mod debug;
 mod rle;
 mod value;
+mod vm;
 
-use crate::chunk::Chunk;
-use crate::chunk::Op;
+use chunk::Chunk;
+use chunk::Op;
+use vm::VM;
 
 fn main() {
+	let mut vm = VM::new();
 	let mut chunk = Chunk::new();
 
 	chunk.write_constant(3.1415, 123);
 	chunk.write(Op::Return as u8, 123);
-	debug::disassemble_chunk(&chunk, "test");
+
+	let _ = vm.interpret(&chunk);
 }
