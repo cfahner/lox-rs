@@ -91,9 +91,9 @@ mod tests {
 
 		// result should be 255 OP_CONSTANT's followed by 1 byte indices (510 bytes total)
 		// then a single OP_CONSTANT_LONG followed by a 3 byte index (4 bytes addition)
-		assert_eq!(chunk.code.len(), (short_limit * 2) + 4);
+		assert_eq!(chunk.code.len(), (short_limit * op_size(OP_CONSTANT)) + op_size(OP_CONSTANT_LONG));
 		assert_eq!(chunk.constants.values.len(), short_limit + 1);
-		assert_eq!(chunk.code[chunk.code.len() - 4], Op::ConstantLong as u8);
+		assert_eq!(chunk.code[chunk.code.len() - 4], OP_CONSTANT_LONG);
 	}
 
 	#[test]
