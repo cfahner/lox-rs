@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use std::ops::Range;
 
 use crate::rle::RunLengthEncoder;
 use crate::value::Value;
@@ -6,6 +7,8 @@ use crate::value::ValueArray;
 
 const MAX_CONSTANTS: usize = 0xffff_ffff_ffff;
 
+// repr(u8) is required for std::mem::transmute(), otherwise Rust might encode the enum as another type
+#[repr(u8)]
 pub enum Op {
 	Constant = 0x00,
 	Return = 0x01,
@@ -13,6 +16,19 @@ pub enum Op {
 	// opcodes that are not part of the default set go below this line
 
 	ConstantLong = 0x02,
+}
+
+impl Op {
+
+	/// Returns the size in bytes of the opcode + operands
+	pub fn size(&self) -> isize {
+		match self {
+			Op::Constant => 2,
+			Op::ConstantLong => 4,
+			_ => 1
+		}
+	}
+
 }
 
 impl TryFrom<u8> for Op {
@@ -45,6 +61,16 @@ impl Chunk {
 			code: Vec::with_capacity(8),
 			lines: RunLengthEncoder::<u32>::new(),
 			constants: ValueArray::new(),
+		}
+	}
+
+	/// Returns pointers to the start and end of the code range
+	pub fn get_code_pointer_range(&self) -> Range<*const u8> {
+		let start_ptr = self.code.as_ptr();
+		// Safety: its actually not unsafe until the end pointer is dereferenced
+		Range {
+			start: start_ptr,
+			end: unsafe { start_ptr.add(self.code.len() * size_of::<u8>()) }
 		}
 	}
 
