@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use std::fmt;
 use std::ops::Range;
 
 use crate::rle::RunLengthEncoder;
@@ -8,7 +9,7 @@ use crate::value::ValueArray;
 const MAX_CONSTANTS: usize = 0xffff_ffff_ffff;
 
 // repr(u8) is required for std::mem::transmute(), otherwise Rust might encode the enum as another type
-#[repr(u8)]
+#[repr(u8)] #[derive(Debug)]
 pub enum Op {
 	Constant = 0x00,
 	Return = 0x01,
@@ -27,6 +28,19 @@ impl Op {
 			Op::ConstantLong => 4,
 			_ => 1
 		}
+	}
+
+}
+
+impl fmt::Display for Op {
+
+	fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+		write!(f, "{}", match self {
+			Op::Constant => "OP_CONSTANT",
+			Op::Return => "OP_RETURN",
+			Op::ConstantLong => "OP_CONSTANT_LONG",
+			_ => "OP_UNKNOWN"
+		})
 	}
 
 }
