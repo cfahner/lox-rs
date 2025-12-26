@@ -41,12 +41,30 @@ impl VM {
 			if ip > end_ptr {
 				return Err(InterpretError::BadChunk); // ip went out of bounds
 			}
-			println!("{}", op_to_string(opcode));
+			match opcode {
+				OP_CONSTANT => self.op_constant(chunk, op_ptr),
+				OP_CONSTANT_LONG => self.op_constant_long(chunk, op_ptr),
+				OP_RETURN => return Ok(()),
+				_ => return Err(InterpretError::BadChunk)
+			}
 			if ip >= end_ptr { // ip can't be greater than, but greater-check is added for safety
 				break;
 			}
 		}
 		Ok(())
+	}
+
+	#[inline]
+	fn op_constant(&self, chunk: &Chunk, ptr: *const u8) {
+		let const_id = unsafe { *ptr.add(1) };
+		println!("OP_CONSTANT {}", chunk.get_constant(const_id as usize));
+	}
+
+	#[inline]
+	fn op_constant_long(&self, chunk: &Chunk, ptr: *const u8) {
+		let const_id_bytes: [u8;4] = unsafe { [ 0, *ptr.add(1), *ptr.add(2), *ptr.add(3) ] };
+		let const_id = u32::from_be_bytes(const_id_bytes);
+		println!("OP_CONSTANT_LONG {}", chunk.get_constant(const_id as usize));
 	}
 
 }

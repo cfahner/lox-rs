@@ -69,18 +69,9 @@ impl Chunk {
 		}
 	}
 
-	/// Returns a tuple containing the decoded value at the given offset and the next code offset
-	pub fn extract_constant_short(&self, offset: usize) -> (Value, usize) {
-		(self.constants.values[self.code[offset] as usize], offset + 1)
-	}
-
-	/// Returns a tuple containing the decoded value at the given offset and the next code offset
-	pub fn extract_constant_long(&self, offset: usize) -> (Value, usize) {
-		let const_index_bytes: [u8;4] = [
-			0, self.code[offset], self.code[offset + 1], self.code[offset + 2]
-		];
-		let const_index = u32::from_be_bytes(const_index_bytes);
-		(self.constants.values[const_index as usize], offset + 3)
+	/// Returns the constant associated with the given "constant id", panics if it doesn't exist
+	pub fn get_constant(&self, const_id: usize) -> Value {
+		self.constants.values[const_id]
 	}
 
 }
