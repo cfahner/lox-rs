@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 use crate::chunk::Chunk;
-use crate::chunk::*;
+use crate::op::*;
 
 /// Possible error cases during chunk interpreting
 pub enum InterpretError {
