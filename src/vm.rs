@@ -43,7 +43,7 @@ impl VM {
 				return Err(InterpretError::BadChunk); // ip went out of bounds
 			}
 			println!("{opcode:02x}");
-			if ip >= end_ptr { // ip should not be greater than, but greater-check is added for safety
+			if ip >= end_ptr { // ip can't be greater than, but greater-check is added for safety
 				break;
 			}
 		}
