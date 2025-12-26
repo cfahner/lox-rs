@@ -81,10 +81,10 @@ impl Chunk {
 	/// Returns pointers to the start and end of the code range
 	pub fn get_code_pointer_range(&self) -> Range<*const u8> {
 		let start_ptr = self.code.as_ptr();
-		// Safety: its actually not unsafe until the end pointer is dereferenced
 		Range {
 			start: start_ptr,
-			end: unsafe { start_ptr.add(self.code.len() * size_of::<u8>()) }
+			// Safety: ptr cannot go beyond range assigned in self.code
+			end: unsafe { start_ptr.add(self.code.len()) }
 		}
 	}
 
