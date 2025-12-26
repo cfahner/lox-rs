@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-use std::fmt;
 use std::ops::Range;
 
 use crate::rle::RunLengthEncoder;
@@ -8,53 +6,26 @@ use crate::value::ValueArray;
 
 const MAX_CONSTANTS: usize = 0xffff_ffff_ffff;
 
-// repr(u8) is required for std::mem::transmute(), otherwise Rust might encode the enum as another type
-#[repr(u8)] #[derive(Debug)]
-pub enum Op {
-	Constant = 0x00,
-	Return = 0x01,
+pub const OP_CONSTANT: u8 = 0x00;
+pub const OP_RETURN: u8 = 0x01;
+pub const OP_CONSTANT_LONG: u8 = 0x02;
 
-	// opcodes that are not part of the default set go below this line
-
-	ConstantLong = 0x02,
-}
-
-impl Op {
-
-	/// Returns the size in bytes of the opcode + operands
-	pub fn size(&self) -> isize {
-		match self {
-			Op::Constant => 2,
-			Op::ConstantLong => 4,
-			_ => 1
-		}
+/// Returns the size of opcode + operands in bytes
+pub fn op_size(op: u8) -> usize {
+	match op {
+		OP_CONSTANT => 2,
+		OP_CONSTANT_LONG => 4,
+		_ => 1
 	}
-
 }
 
-impl fmt::Display for Op {
-
-	fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-		write!(f, "{}", match self {
-			Op::Constant => "OP_CONSTANT",
-			Op::Return => "OP_RETURN",
-			Op::ConstantLong => "OP_CONSTANT_LONG",
-			_ => "OP_UNKNOWN"
-		})
-	}
-
-}
-
-impl TryFrom<u8> for Op {
-	type Error = ();
-
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0x00 => Ok(Op::Constant),
-			0x01 => Ok(Op::Return),
-			0x02 => Ok(Op::ConstantLong),
-			_ => Err(()),
-		}
+/// Returns a string representation of the given opcode
+pub fn op_to_string(op: u8) -> &'static str {
+	match op {
+		OP_CONSTANT => "OP_CONSTANT",
+		OP_RETURN => "OP_RETURN",
+		OP_CONSTANT_LONG => "OP_CONSTANT_LONG",
+		_ => "OP_UNKNOWN"
 	}
 }
 
@@ -109,11 +80,11 @@ impl Chunk {
 			panic!("Cannot write constant to chunk, maximum reached");
 		}
 		if const_index < u8::MAX as usize {
-			self.write(Op::Constant as u8, line);
+			self.write(OP_CONSTANT, line);
 			self.write(const_index as u8, line);
 			return;
 		}
-		self.write(Op::ConstantLong as u8, line);
+		self.write(OP_CONSTANT_LONG, line);
 		let bytes = const_index.to_be_bytes();
 		for i in 1..4 {
 			self.write(bytes[bytes.len() - i], line);

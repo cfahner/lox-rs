@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 use crate::chunk::Chunk;
-use crate::chunk::Op;
+use crate::chunk::*;
 
 /// Possible error cases during chunk interpreting
 pub enum InterpretError {
@@ -24,25 +24,24 @@ impl VM {
 		if ptr_range.is_empty() {
 			return Ok(());
 		}
-		self.run(ptr_range)
+		self.run(chunk, ptr_range)
 	}
 
-	/// Runs the instructions present in the given range of pointers
-	fn run(&mut self, ptr_range: Range<*const u8>) -> Result<(), InterpretError> {
+	/// Runs the instructions in the given range of pointers
+	fn run(&mut self, chunk: &Chunk, ptr_range: Range<*const u8>) -> Result<(), InterpretError> {
 		// ip is modified a lot and so is kept as a local variable to keep it close / cacheable
 		let Range { start: mut ip, end: end_ptr } = ptr_range;
 		loop {
+			// create a copy of the pointer to the opcode with operands
+			let op_ptr = ip;
 			// Safety: ip is never beyond end_ptr at the start of the loop
 			let opcode = unsafe { *ip };
-			// since this is very hot code, transmute avoids the overhead of Op::try_from()
-			// Safety: transmute could create invalid op -> check if operands don't go beyond end_ptr
-			let op: Op = unsafe { std::mem::transmute(opcode) };
 			// Safety: update and check next ip first to prevent an unsafe ptr dereference
-			unsafe { ip = ip.offset(op.size()); }
+			unsafe { ip = ip.add(op_size(opcode)); }
 			if ip > end_ptr {
 				return Err(InterpretError::BadChunk); // ip went out of bounds
 			}
-			println!("{opcode:02x}");
+			println!("{}", op_to_string(opcode));
 			if ip >= end_ptr { // ip can't be greater than, but greater-check is added for safety
 				break;
 			}
