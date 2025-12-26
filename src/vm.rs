@@ -21,7 +21,7 @@ impl VM {
 		// apparently dereferencing raw pointers is faster than indexing a vector, so setting up pointers
 		let ptr_range = chunk.get_code_pointer_range();
 		// if range is empty, the first iteration of the loop would trigger undefined behavior
-		if (ptr_range.is_empty()) {
+		if ptr_range.is_empty() {
 			return Ok(());
 		}
 		self.run(ptr_range)
