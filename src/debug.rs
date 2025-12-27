@@ -13,7 +13,7 @@ pub fn op_to_string(op: u8) -> &'static str {
 }
 
 /// Prints a debug representation of a value
-pub fn print_value(value: Value) {
+pub fn print_value(value: &Value) {
 	print!("{}", value);
 }
 
