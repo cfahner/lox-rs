@@ -4,6 +4,7 @@ use crate::chunk::Chunk;
 use crate::op::*;
 
 /// Possible error cases during chunk interpreting
+#[derive(PartialEq)] #[derive(Debug)]
 pub enum InterpretError {
 	/// Occurs when a chunk was badly formatted (eg. the bytes don't match with opcodes + operands)
 	BadChunk,
@@ -79,4 +80,20 @@ impl VM {
 		println!("Constant: '{}'", chunk.get_constant(const_id as usize));
 	}
 
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn interpret_should_error_on_malformed_chunk() {
+		let mut sut = VM::new();
+		let mut chunk = Chunk::new();
+		chunk.write(OP_CONSTANT, 1); // OP_CONSTANT is normally followed by one byte of constant id
+
+		let result = sut.interpret(&chunk);
+
+		assert_eq!(result, Result::Err(InterpretError::BadChunk));
+	}
 }
