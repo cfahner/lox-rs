@@ -1,4 +1,5 @@
 mod chunk;
+#[cfg(feature = "trace")]
 mod debug;
 mod rle;
 mod op;
