@@ -9,6 +9,13 @@ pub enum InterpretError {
 	BadChunk,
 }
 
+#[cfg(feature = "trace")]
+fn trace_op(chunk: &Chunk, ptr: *const u8) {
+	let start_ptr = chunk.code.as_ptr();
+	// Safety: run() loop already checks if ip is safe relative to start_ptr
+	crate::debug::disassemble_instruction(chunk, unsafe { ptr.offset_from(start_ptr) } as usize);
+}
+
 pub struct VM { }
 
 impl VM {
@@ -36,6 +43,9 @@ impl VM {
 			let op_ptr = ip;
 			// Safety: ip is never beyond end_ptr at the start of the loop
 			let opcode = unsafe { *ip };
+			#[cfg(feature = "trace")] {
+				trace_op(chunk, ip);
+			}
 			// Safety: update and check next ip first to prevent an unsafe ptr dereference
 			unsafe { ip = ip.add(op_size(opcode)); }
 			if ip > end_ptr {
@@ -56,15 +66,17 @@ impl VM {
 
 	#[inline]
 	fn op_constant(&self, chunk: &Chunk, ptr: *const u8) {
+		// Safety: run() loop has already checked safety of ptr
 		let const_id = unsafe { *ptr.add(1) };
-		println!("OP_CONSTANT {}", chunk.get_constant(const_id as usize));
+		println!("Constant: '{}'", chunk.get_constant(const_id as usize));
 	}
 
 	#[inline]
 	fn op_constant_long(&self, chunk: &Chunk, ptr: *const u8) {
+		// Safety: run() loop has already checked safety of ptr
 		let const_id_bytes: [u8;4] = unsafe { [ 0, *ptr.add(1), *ptr.add(2), *ptr.add(3) ] };
 		let const_id = u32::from_be_bytes(const_id_bytes);
-		println!("OP_CONSTANT_LONG {}", chunk.get_constant(const_id as usize));
+		println!("Constant: '{}'", chunk.get_constant(const_id as usize));
 	}
 
 }
