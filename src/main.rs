@@ -1,4 +1,5 @@
 mod chunk;
+mod debug;
 mod rle;
 mod op;
 mod value;
