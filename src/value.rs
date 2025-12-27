@@ -1,4 +1,26 @@
-pub type Value = f64;
+use std::fmt;
+
+pub struct Value {
+
+	pub value: f64,
+
+}
+
+impl Value {
+
+	pub fn new(value: f64) -> Self {
+		Self { value: value }
+	}
+
+}
+
+impl fmt::Display for Value {
+
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "{}", self.value)
+	}
+
+}
 
 pub struct ValueArray {
 
@@ -12,7 +34,7 @@ impl ValueArray {
 		ValueArray { values: Vec::with_capacity(8) }
 	}
 
-	pub fn write(&mut self, value: f64) {
+	pub fn write(&mut self, value: Value) {
 		self.values.push(value);
 	}
 

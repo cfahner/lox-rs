@@ -70,8 +70,8 @@ impl Chunk {
 	}
 
 	/// Returns the constant associated with the given "constant id", panics if it doesn't exist
-	pub fn get_constant(&self, const_id: usize) -> Value {
-		self.constants.values[const_id]
+	pub fn get_constant(&self, const_id: usize) -> &Value {
+		&self.constants.values[const_id]
 	}
 
 }
@@ -86,7 +86,7 @@ mod tests {
 		let mut chunk = Chunk::new();
 
 		for i in 0..(short_limit + 1) {
-			chunk.write_constant(1.0, i as u32);
+			chunk.write_constant(Value::new(1.0), i as u32);
 		}
 
 		// result should be 255 OP_CONSTANT's followed by 1 byte indices (510 bytes total)
