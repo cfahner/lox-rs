@@ -10,13 +10,3 @@ pub fn op_size(op: u8) -> usize {
 		_ => 1
 	}
 }
-
-/// Returns a string representation of the given opcode
-pub fn op_to_string(op: u8) -> &'static str {
-	match op {
-		OP_CONSTANT => "OP_CONSTANT",
-		OP_RETURN => "OP_RETURN",
-		OP_CONSTANT_LONG => "OP_CONSTANT_LONG",
-		_ => "OP_UNKNOWN"
-	}
-}

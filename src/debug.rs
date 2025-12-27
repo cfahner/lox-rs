@@ -2,6 +2,16 @@ use crate::chunk::Chunk;
 use crate::op::*;
 use crate::value::print_value;
 
+/// Returns a string representation of the given opcode
+pub fn op_to_string(op: u8) -> &'static str {
+	match op {
+		OP_CONSTANT => "OP_CONSTANT",
+		OP_RETURN => "OP_RETURN",
+		OP_CONSTANT_LONG => "OP_CONSTANT_LONG",
+		_ => "OP_UNKNOWN"
+	}
+}
+
 /// Disassembles the instruction at the given code offset in the chunk and returns the next code offset
 pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
 	print!("{offset:04} ");
