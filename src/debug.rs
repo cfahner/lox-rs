@@ -1,6 +1,6 @@
 use crate::chunk::Chunk;
 use crate::op::*;
-use crate::value::print_value;
+use crate::value::Value;
 
 /// Returns a string representation of the given opcode
 pub fn op_to_string(op: u8) -> &'static str {
@@ -10,6 +10,11 @@ pub fn op_to_string(op: u8) -> &'static str {
 		OP_CONSTANT_LONG => "OP_CONSTANT_LONG",
 		_ => "OP_UNKNOWN"
 	}
+}
+
+/// Prints a debug representation of a value
+pub fn print_value(value: Value) {
+	print!("{}", value);
 }
 
 /// Disassembles the instruction at the given code offset in the chunk and returns the next code offset
