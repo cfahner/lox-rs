@@ -57,8 +57,9 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 			}
 			match opcode {
 				OP_CONSTANT => self.op_constant(chunk, op_ptr),
-				OP_CONSTANT_LONG => self.op_constant_long(chunk, op_ptr),
+				OP_NEGATE => self.op_negate(),
 				OP_RETURN => self.op_return(),
+				OP_CONSTANT_LONG => self.op_constant_long(chunk, op_ptr),
 				_ => return Err(InterpretError::BadChunk)
 			}
 			if ip >= end_ptr { // ip can't be greater than, but greater-check is added for safety
@@ -73,6 +74,13 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 		// Safety: run() loop has already checked safety of ptr
 		let const_id = unsafe { *ptr.add(1) };
 		self.stack_push(chunk.get_constant(const_id as usize).clone());
+	}
+
+	#[inline]
+	fn op_negate(&mut self) {
+		let mut value = self.stack_pop();
+		value.negate();
+		self.stack_push(value);
 	}
 
 	#[inline]
@@ -97,10 +105,10 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 	}
 
 	#[inline]
-	fn stack_pop(&mut self) -> &Value {
+	fn stack_pop(&mut self) -> Value {
 		unsafe {
 			self.stack_top = self.stack_top.offset(-1);
-			&*self.stack_top
+			*self.stack_top
 		}
 	}
 
