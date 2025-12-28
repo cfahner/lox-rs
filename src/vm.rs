@@ -124,6 +124,9 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 
 	#[inline]
 	fn stack_push(&mut self, value: Value) {
+		if self.stack_top.cast_const() >= self.stack.as_ptr_range().end {
+			panic!("Stack overflow");
+		}
 		unsafe {
 			*self.stack_top = value;
 			self.stack_top = self.stack_top.add(1);
@@ -132,6 +135,9 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 
 	#[inline]
 	fn stack_pop(&mut self) -> Value {
+		if self.stack_top == self.stack.as_mut_ptr() {
+			panic!("Stack underflow");
+		}
 		unsafe {
 			self.stack_top = self.stack_top.offset(-1);
 			*self.stack_top
@@ -162,7 +168,7 @@ mod tests {
 
 	#[test]
 	fn interpret_should_error_on_malformed_chunk() {
-		let mut sut = VM::new();
+		let mut sut = VM::<8>::new();
 		let mut chunk = Chunk::new();
 		chunk.write(OP_CONSTANT, 1); // OP_CONSTANT is normally followed by one byte of constant id
 
@@ -170,4 +176,26 @@ mod tests {
 
 		assert_eq!(result, Result::Err(InterpretError::BadChunk));
 	}
+
+	#[test] #[should_panic]
+	fn interpret_should_panic_on_full_stack() {
+		let mut chunk = Chunk::new();
+		for i in 0..9 {
+			print!("{i:}");
+			chunk.write_constant(Value::new(1.0), 1);
+		}
+		let mut sut = VM::<8>::new();
+
+		let _ = sut.interpret(&chunk);
+	}
+
+	#[test] #[should_panic]
+	fn interpret_should_panic_when_popping_empty_stack() {
+		let mut chunk = Chunk::new();
+		chunk.write(OP_ADD, 1);
+		let mut sut = VM::<8>::new();
+
+		let _ = sut.interpret(&chunk);
+	}
+
 }
