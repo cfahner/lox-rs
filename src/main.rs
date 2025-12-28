@@ -12,7 +12,7 @@ use vm::VM;
 use value::Value;
 
 fn main() {
-	let mut vm = VM::new();
+	let mut vm = VM::<256>::new();
 	let mut chunk = Chunk::new();
 
 	chunk.write_constant(Value::new(3.1415), 123);

@@ -2,6 +2,7 @@ use std::ops::Range;
 
 use crate::chunk::Chunk;
 use crate::op::*;
+use crate::value::Value;
 
 /// Possible error cases during chunk interpreting
 #[derive(PartialEq)] #[derive(Debug)]
@@ -10,22 +11,24 @@ pub enum InterpretError {
 	BadChunk,
 }
 
-#[cfg(feature = "trace")]
-fn trace_op(chunk: &Chunk, ptr: *const u8) {
-	let start_ptr = chunk.code.as_ptr();
-	// Safety: run() loop already checks if ip is safe relative to start_ptr
-	crate::debug::disassemble_instruction(chunk, unsafe { ptr.offset_from(start_ptr) } as usize);
+pub struct VM<const N_STACK_SIZE: usize> {
+
+	stack: [Value;N_STACK_SIZE],
+
+	stack_top: *mut Value,
+
 }
 
-pub struct VM { }
-
-impl VM {
+impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 
 	pub fn new() -> Self {
-		Self { }
+		Self { stack: [Value::new(0.0);N_STACK_SIZE], stack_top: std::ptr::null_mut() }
 	}
 
 	pub fn interpret(&mut self, chunk: &Chunk) -> Result<(), InterpretError> {
+		if self.stack_top.is_null() {
+			self.stack_top = self.stack.as_mut_ptr();
+		}
 		// apparently dereferencing raw pointers is faster than indexing a vector, so setting up pointers
 		let ptr_range = chunk.get_code_pointer_range();
 		// if range is empty, the first iteration of the loop would trigger undefined behavior
@@ -45,7 +48,7 @@ impl VM {
 			// Safety: ip is never beyond end_ptr at the start of the loop
 			let opcode = unsafe { *ip };
 			#[cfg(feature = "trace")] {
-				trace_op(chunk, ip);
+				self.trace_op(chunk, ip);
 			}
 			// Safety: update and check next ip first to prevent an unsafe ptr dereference
 			unsafe { ip = ip.add(op_size(opcode)); }
@@ -55,7 +58,7 @@ impl VM {
 			match opcode {
 				OP_CONSTANT => self.op_constant(chunk, op_ptr),
 				OP_CONSTANT_LONG => self.op_constant_long(chunk, op_ptr),
-				OP_RETURN => return Ok(()),
+				OP_RETURN => self.op_return(),
 				_ => return Err(InterpretError::BadChunk)
 			}
 			if ip >= end_ptr { // ip can't be greater than, but greater-check is added for safety
@@ -66,18 +69,55 @@ impl VM {
 	}
 
 	#[inline]
-	fn op_constant(&self, chunk: &Chunk, ptr: *const u8) {
+	fn op_constant(&mut self, chunk: &Chunk, ptr: *const u8) {
 		// Safety: run() loop has already checked safety of ptr
 		let const_id = unsafe { *ptr.add(1) };
-		println!("Constant: '{}'", chunk.get_constant(const_id as usize));
+		self.stack_push(chunk.get_constant(const_id as usize).clone());
 	}
 
 	#[inline]
-	fn op_constant_long(&self, chunk: &Chunk, ptr: *const u8) {
+	fn op_return(&mut self) {
+		println!("{}", self.stack_pop());
+	}
+
+	#[inline]
+	fn op_constant_long(&mut self, chunk: &Chunk, ptr: *const u8) {
 		// Safety: run() loop has already checked safety of ptr
 		let const_id_bytes: [u8;4] = unsafe { [ 0, *ptr.add(1), *ptr.add(2), *ptr.add(3) ] };
 		let const_id = u32::from_be_bytes(const_id_bytes);
-		println!("Constant: '{}'", chunk.get_constant(const_id as usize));
+		self.stack_push(chunk.get_constant(const_id as usize).clone());
+	}
+
+	#[inline]
+	fn stack_push(&mut self, value: Value) {
+		unsafe {
+			*self.stack_top = value;
+			self.stack_top = self.stack_top.add(1);
+		}
+	}
+
+	#[inline]
+	fn stack_pop(&mut self) -> &Value {
+		unsafe {
+			self.stack_top = self.stack_top.offset(-1);
+			&*self.stack_top
+		}
+	}
+
+	#[cfg(feature = "trace")]
+	fn trace_op(&self, chunk: &Chunk, ptr: *const u8) {
+		print!("          ");
+		let mut stack_ptr = self.stack.as_ptr();
+		while stack_ptr < self.stack_top {
+			unsafe {
+				print!("[ {} ]", *stack_ptr);
+				stack_ptr = stack_ptr.add(1);
+			}
+		}
+		println!();
+		let start_ptr = chunk.code.as_ptr();
+		// Safety: run() loop already checks if ip is safe relative to start_ptr
+		crate::debug::disassemble_instruction(chunk, unsafe { ptr.offset_from(start_ptr) } as usize);
 	}
 
 }
