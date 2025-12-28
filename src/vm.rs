@@ -114,9 +114,7 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 
 	#[inline]
 	fn op_negate(&mut self) {
-		let mut value = self.stack_pop();
-		value.negate();
-		self.stack_push(value);
+		unsafe { (*self.stack_top.offset(-1)).negate(); }
 	}
 
 	#[inline]
