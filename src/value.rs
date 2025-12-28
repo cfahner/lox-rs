@@ -17,6 +17,22 @@ impl Value {
 		self.value = -self.value;
 	}
 
+	pub fn add(&mut self, other: &Value) {
+		self.value += other.value;
+	}
+
+	pub fn subtract(&mut self, other: &Value) {
+		self.value -= other.value;
+	}
+
+	pub fn multiply(&mut self, other: &Value) {
+		self.value *= other.value;
+	}
+
+	pub fn divide(&mut self, other: &Value) {
+		self.value /= other.value;
+	}
+
 }
 
 impl fmt::Display for Value {
