@@ -13,6 +13,10 @@ impl Value {
 		Self { value: value }
 	}
 
+	pub fn negate(&mut self) {
+		self.value = -self.value;
+	}
+
 }
 
 impl fmt::Display for Value {
