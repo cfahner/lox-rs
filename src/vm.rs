@@ -83,9 +83,7 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 	#[inline]
 	fn op_add(&mut self) {
 		let b = self.stack_pop();
-		let mut a = self.stack_pop();
-		a.add(&b);
-		self.stack_push(a);
+		unsafe { (*self.stack_top.offset(-1)).add(&b); }
 	}
 
 	#[inline]
