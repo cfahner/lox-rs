@@ -1,5 +1,6 @@
 use std::fmt;
 
+#[derive(Clone)] #[derive(Copy)]
 pub struct Value {
 
 	pub value: f64,
