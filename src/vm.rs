@@ -57,6 +57,10 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 			}
 			match opcode {
 				OP_CONSTANT => self.op_constant(chunk, op_ptr),
+				OP_ADD => self.op_add(),
+				OP_SUBTRACT => self.op_subtract(),
+				OP_MULTIPLY => self.op_multiply(),
+				OP_DIVIDE => self.op_divide(),
 				OP_NEGATE => self.op_negate(),
 				OP_RETURN => self.op_return(),
 				OP_CONSTANT_LONG => self.op_constant_long(chunk, op_ptr),
@@ -74,6 +78,38 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 		// Safety: run() loop has already checked safety of ptr
 		let const_id = unsafe { *ptr.add(1) };
 		self.stack_push(chunk.get_constant(const_id as usize).clone());
+	}
+
+	#[inline]
+	fn op_add(&mut self) {
+		let b = self.stack_pop();
+		let mut a = self.stack_pop();
+		a.add(&b);
+		self.stack_push(a);
+	}
+
+	#[inline]
+	fn op_subtract(&mut self) {
+		let b = self.stack_pop();
+		let mut a = self.stack_pop();
+		a.subtract(&b);
+		self.stack_push(a);
+	}
+
+	#[inline]
+	fn op_multiply(&mut self) {
+		let b = self.stack_pop();
+		let mut a = self.stack_pop();
+		a.multiply(&b);
+		self.stack_push(a);
+	}
+
+	#[inline]
+	fn op_divide(&mut self) {
+		let b = self.stack_pop();
+		let mut a = self.stack_pop();
+		a.divide(&b);
+		self.stack_push(a);
 	}
 
 	#[inline]
