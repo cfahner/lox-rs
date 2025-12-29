@@ -6,26 +6,55 @@ mod op;
 mod value;
 mod vm;
 
-use chunk::Chunk;
-use op::*;
-use vm::VM;
-use value::Value;
+use std::io::Write;
 
-fn main() {
+use sysexits::ExitCode;
+
+use crate::vm::InterpretError;
+use crate::vm::VM;
+
+fn main() -> ExitCode {
+	let args: Vec<String> = std::env::args().collect();
+	if args.len() == 1 {
+		repl()
+	} else if args.len() == 2 {
+		run_file(&args[1][..])
+	} else {
+		println!("Usage: lox [path]");
+		ExitCode::Usage
+	}
+}
+
+fn run_file(filename: &str) -> ExitCode {
+	let Ok(source) = std::fs::read_to_string(filename) else {
+		return ExitCode::IoErr;
+	};
 	let mut vm = VM::<256>::new();
-	let mut chunk = Chunk::new();
+	match interpret(&mut vm, &source) {
+		Ok(_) => ExitCode::Ok,
+		Err(interpret_error) => interpret_error.to_exit_code(),
+	}
+}
 
-	chunk.write_constant(Value::new(1.0), 1);
-	chunk.write_constant(Value::new(1.0), 1);
-	chunk.write(OP_ADD, 1);
-	chunk.write_constant(Value::new(1.0), 1);
-	chunk.write(OP_SUBTRACT, 1);
-	chunk.write_constant(Value::new(2.0), 1);
-	chunk.write(OP_MULTIPLY, 1);
-	chunk.write_constant(Value::new(4.0), 1);
-	chunk.write(OP_DIVIDE, 1);
-	chunk.write(OP_NEGATE, 1);
-	chunk.write(OP_RETURN, 1);
+fn repl() -> ExitCode {
+	let mut vm = VM::<256>::new();
+	let mut buffer = String::new();
+	loop {
+		print!("> ");
+		if let Err(_) = std::io::stdout().flush() {
+			return ExitCode::IoErr;
+		}
+		let Ok(_) = std::io::stdin().read_line(&mut buffer) else {
+			return ExitCode::IoErr;
+		};
+		if let Err(interpret_error) = interpret(&mut vm, &buffer) {
+			return interpret_error.to_exit_code();
+		}
+		buffer.clear();
+	}
+	ExitCode::Ok
+}
 
-	let _ = vm.interpret(&chunk);
+fn interpret<const N: usize>(vm: &mut VM<N>, source: &str) -> Result<(), InterpretError> {
+	Ok(())
 }
