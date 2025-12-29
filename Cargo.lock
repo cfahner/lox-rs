@@ -5,3 +5,12 @@ version = 4
 [[package]]
 name = "lox"
 version = "0.1.0"
+dependencies = [
+ "sysexits",
+]
+
+[[package]]
+name = "sysexits"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf9154bb31a0b747e214520c60cb9a842df871bf6a5fea5be4352b59d6c432ab"
