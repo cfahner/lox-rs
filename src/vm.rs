@@ -1,5 +1,7 @@
 use std::ops::Range;
 
+use sysexits::ExitCode;
+
 use crate::chunk::Chunk;
 use crate::op::*;
 use crate::value::Value;
@@ -7,8 +9,26 @@ use crate::value::Value;
 /// Possible error cases during chunk interpreting
 #[derive(PartialEq)] #[derive(Debug)]
 pub enum InterpretError {
+
 	/// Occurs when a chunk was badly formatted (eg. the bytes don't match with opcodes + operands)
 	BadChunk,
+
+	Compile,
+
+	Runtime,
+
+}
+
+impl InterpretError {
+
+	pub fn to_exit_code(&self) -> ExitCode {
+		match self {
+			Self::BadChunk => ExitCode::Software,
+			Self::Compile => ExitCode::DataErr,
+			Self::Runtime => ExitCode::Software,
+		}
+	}
+
 }
 
 pub struct VM<const N_STACK_SIZE: usize> {
