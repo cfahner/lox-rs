@@ -1,8 +1,10 @@
 mod chunk;
+mod compiler;
 #[cfg(feature = "trace")]
 mod debug;
 mod rle;
 mod op;
+mod scanner;
 mod value;
 mod vm;
 
