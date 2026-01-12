@@ -149,6 +149,15 @@ impl<'a> Scanner<'a> {
 					self.line += 1;
 					self.discard();
 				},
+				'/' => {
+					if self.peek_next() == Some('/') {
+						while self.peek() != '\n' && !self.is_at_end() {
+							self.discard();
+						}
+					} else {
+						return;
+					}
+				},
 				_ => break
 			};
 		}
@@ -161,6 +170,13 @@ impl<'a> Scanner<'a> {
 
 	fn peek(&self) -> char {
 		self.source[self.current] as char
+	}
+
+	fn peek_next(&self) -> Option<char> {
+		match self.source.get(self.current + 1) {
+			Some(byte) => Some(*byte as char),
+			None => None
+		}
 	}
 
 	fn discard(&mut self) {
