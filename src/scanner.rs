@@ -140,9 +140,27 @@ impl<'a> Scanner<'a> {
 		}
 	}
 
+	fn skip_whitespace(&mut self) {
+		loop {
+			let c = self.peek();
+			match c {
+				'\r' | '\t' | ' ' => self.discard(),
+				_ => break
+			};
+		}
+	}
+
 	fn advance(&mut self) -> char {
 		self.current += 1;
 		self.source[self.current - 1] as char
+	}
+
+	fn peek(&self) -> char {
+		self.source[self.current] as char
+	}
+
+	fn discard(&mut self) {
+		self.current += 1;
 	}
 
 	fn consume_if(&mut self, character: char) -> bool {
@@ -170,6 +188,8 @@ impl<'a> Iterator for Scanner<'a> {
 		if self.is_at_end() {
 			return None;
 		}
+
+		self.skip_whitespace();
 
 		Some(match self.advance() {
 			'(' => self.make_token(TokenKind::LeftParen),
