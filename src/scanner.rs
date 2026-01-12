@@ -142,7 +142,7 @@ impl<'a> Scanner<'a> {
 
 	fn consume_identifier(&mut self) -> Token<'a> {
 		while is_alpha(self.peek()) || is_digit(self.peek()) {
-			self.discard();
+			self.advance();
 		}
 		// Safety: each byte has already been checked and is either alpha or digit
 		let identifier = unsafe { std::str::from_utf8_unchecked(&self.source[self.start..self.current]) };
@@ -172,24 +172,24 @@ impl<'a> Scanner<'a> {
 			if self.peek() == '\n' {
 				self.line += 1;
 			}
-			self.discard();
+			self.advance();
 		}
 		if self.is_at_end() {
 			return self.error_token("Unterminated string.");
 		}
-		self.discard(); // advance beyond the closing quote
+		self.advance(); // advance beyond the closing quote
 		self.make_token(TokenKind::String)
 	}
 
 	fn consume_number(&mut self) -> Token<'a> {
 		while is_digit(self.peek()) {
-			self.discard();
+			self.advance();
 		}
 		// fraction
 		if self.peek() == '.' && is_digit_in_option(self.peek_next()) {
-			self.discard();
+			self.advance();
 			while is_digit(self.peek()) {
-				self.discard();
+				self.advance();
 			}
 		}
 		self.make_token(TokenKind::Number)
@@ -199,15 +199,15 @@ impl<'a> Scanner<'a> {
 		loop {
 			let c = self.peek();
 			match c {
-				'\r' | '\t' | ' ' => self.discard(),
+				'\r' | '\t' | ' ' => self.advance(),
 				'\n' => {
 					self.line += 1;
-					self.discard();
+					self.advance();
 				},
 				'/' => {
 					if self.peek_next() == Some('/') {
 						while self.peek() != '\n' && !self.is_at_end() {
-							self.discard();
+							self.advance();
 						}
 					} else {
 						return;
@@ -234,7 +234,7 @@ impl<'a> Scanner<'a> {
 		}
 	}
 
-	fn discard(&mut self) {
+	fn advance(&mut self) {
 		self.current += 1;
 	}
 
