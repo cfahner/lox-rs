@@ -140,6 +140,33 @@ impl<'a> Scanner<'a> {
 		}
 	}
 
+	fn consume_identifier(&mut self) -> Token<'a> {
+		while is_alpha(self.peek()) || is_digit(self.peek()) {
+			self.discard();
+		}
+		// Safety: each byte has already been checked and is either alpha or digit
+		let identifier = unsafe { std::str::from_utf8_unchecked(&self.source[self.start..self.current]) };
+		self.make_token(match identifier {
+			"and" => TokenKind::And,
+			"class" => TokenKind::Class,
+			"else" => TokenKind::Else,
+			"false" => TokenKind::False,
+			"for" => TokenKind::For,
+			"fun" => TokenKind::Fun,
+			"if" => TokenKind::If,
+			"nil" => TokenKind::Nil,
+			"or" => TokenKind::Or,
+			"print" => TokenKind::Print,
+			"return" => TokenKind::Return,
+			"super" => TokenKind::Super,
+			"this" => TokenKind::This,
+			"true" => TokenKind::True,
+			"var" => TokenKind::Var,
+			"while" => TokenKind::While,
+			_ => TokenKind::Identifier
+		})
+	}
+
 	fn consume_string(&mut self) -> Token<'a> {
 		while self.peek() != '"' && !self.is_at_end() {
 			if self.peek() == '\n' {
@@ -284,6 +311,13 @@ fn is_digit_in_option(char_option: Option<char>) -> bool {
 fn is_digit(character: char) -> bool {
 	match (character) {
 		'0'..='9' => true,
+		_ => false
+	}
+}
+
+fn is_alpha(character: char) -> bool {
+	match character {
+		'a'..='z' | 'A'..='Z' | '_' => true,
 		_ => false
 	}
 }
