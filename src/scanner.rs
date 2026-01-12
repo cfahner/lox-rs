@@ -150,7 +150,7 @@ impl<'a> Scanner<'a> {
 		}
 	}
 
-	fn advance(&mut self) -> char {
+	fn consume(&mut self) -> char {
 		self.current += 1;
 		self.source[self.current - 1] as char
 	}
@@ -191,7 +191,7 @@ impl<'a> Iterator for Scanner<'a> {
 
 		self.skip_whitespace();
 
-		Some(match self.advance() {
+		Some(match self.consume() {
 			'(' => self.make_token(TokenKind::LeftParen),
 			')' => self.make_token(TokenKind::RightParen),
 			'{' => self.make_token(TokenKind::LeftBrace),
