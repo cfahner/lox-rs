@@ -1,4 +1,4 @@
-pub enum TokenType {
+pub enum TokenKind {
 
 	/* single character tokens */
 
@@ -92,7 +92,7 @@ pub enum TokenType {
 
 pub struct Token<'a> {
 
-	pub r#type: TokenType,
+	pub kind: TokenKind,
 
 	pub content: &'a str,
 
@@ -123,9 +123,9 @@ impl<'a> Scanner<'a> {
 		}
 	}
 
-	fn make_token(&self, r#type: TokenType) -> Token<'a> {
+	fn make_token(&self, kind: TokenKind) -> Token<'a> {
 		Token {
-			r#type: r#type,
+			kind: kind,
 			// Safety: invalid sequences will already have been rejected before this point is reached
 			content: unsafe { std::str::from_utf8_unchecked(&self.source[self.start..self.current]) },
 			line: self.line,
@@ -134,7 +134,7 @@ impl<'a> Scanner<'a> {
 
 	fn error_token(&self, message: &'a str) -> Token<'a> {
 		Token {
-			r#type: TokenType::Error,
+			kind: TokenKind::Error,
 			content: message,
 			line: self.line,
 		}
@@ -172,31 +172,31 @@ impl<'a> Iterator for Scanner<'a> {
 		}
 
 		Some(match self.advance() {
-			'(' => self.make_token(TokenType::LeftParen),
-			')' => self.make_token(TokenType::RightParen),
-			'{' => self.make_token(TokenType::LeftBrace),
-			'}' => self.make_token(TokenType::RightBrace),
-			';' => self.make_token(TokenType::Semicolon),
-			',' => self.make_token(TokenType::Comma),
-			'.' => self.make_token(TokenType::Dot),
-			'-' => self.make_token(TokenType::Minus),
-			'/' => self.make_token(TokenType::Slash),
-			'*' => self.make_token(TokenType::Star),
+			'(' => self.make_token(TokenKind::LeftParen),
+			')' => self.make_token(TokenKind::RightParen),
+			'{' => self.make_token(TokenKind::LeftBrace),
+			'}' => self.make_token(TokenKind::RightBrace),
+			';' => self.make_token(TokenKind::Semicolon),
+			',' => self.make_token(TokenKind::Comma),
+			'.' => self.make_token(TokenKind::Dot),
+			'-' => self.make_token(TokenKind::Minus),
+			'/' => self.make_token(TokenKind::Slash),
+			'*' => self.make_token(TokenKind::Star),
 			'!' => match self.consume_if('=') {
-				true => self.make_token(TokenType::BangEqual),
-				false => self.make_token(TokenType::Bang)
+				true => self.make_token(TokenKind::BangEqual),
+				false => self.make_token(TokenKind::Bang)
 			},
 			'=' => match self.consume_if('=') {
-				true => self.make_token(TokenType::EqualEqual),
-				false => self.make_token(TokenType::Equal)
+				true => self.make_token(TokenKind::EqualEqual),
+				false => self.make_token(TokenKind::Equal)
 			},
 			'<' => match self.consume_if('=') {
-				true => self.make_token(TokenType::LessEqual),
-				false => self.make_token(TokenType::Less)
+				true => self.make_token(TokenKind::LessEqual),
+				false => self.make_token(TokenKind::Less)
 			},
 			'>' => match self.consume_if('=') {
-				true => self.make_token(TokenType::GreaterEqual),
-				false => self.make_token(TokenType::Greater)
+				true => self.make_token(TokenKind::GreaterEqual),
+				false => self.make_token(TokenKind::Greater)
 			},
 			_ => self.error_token("Unexpected character.")
 		})
