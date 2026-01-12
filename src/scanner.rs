@@ -145,6 +145,10 @@ impl<'a> Scanner<'a> {
 			let c = self.peek();
 			match c {
 				'\r' | '\t' | ' ' => self.discard(),
+				'\n' => {
+					self.line += 1;
+					self.discard();
+				},
 				_ => break
 			};
 		}
