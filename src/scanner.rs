@@ -147,13 +147,25 @@ impl<'a> Scanner<'a> {
 			}
 			self.discard();
 		}
-
 		if self.is_at_end() {
 			return self.error_token("Unterminated string.");
 		}
-
 		self.discard(); // advance beyond the closing quote
 		self.make_token(TokenKind::String)
+	}
+
+	fn consume_number(&mut self) -> Token<'a> {
+		while is_digit(self.peek()) {
+			self.discard();
+		}
+		// fraction
+		if self.peek() == '.' && is_digit_in_option(self.peek_next()) {
+			self.discard();
+			while is_digit(self.peek()) {
+				self.discard();
+			}
+		}
+		self.make_token(TokenKind::Number)
 	}
 
 	fn skip_whitespace(&mut self) {
@@ -255,8 +267,23 @@ impl<'a> Iterator for Scanner<'a> {
 				false => self.make_token(TokenKind::Greater)
 			},
 			'"' => self.consume_string(),
+			'0'..='9' => self.consume_number(),
 			_ => self.error_token("Unexpected character.")
 		})
 	}
 
+}
+
+fn is_digit_in_option(char_option: Option<char>) -> bool {
+	match char_option {
+		Some(c) => is_digit(c),
+		None => false
+	}
+}
+
+fn is_digit(character: char) -> bool {
+	match (character) {
+		'0'..='9' => true,
+		_ => false
+	}
 }
