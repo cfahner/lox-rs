@@ -140,6 +140,22 @@ impl<'a> Scanner<'a> {
 		}
 	}
 
+	fn consume_string(&mut self) -> Token<'a> {
+		while self.peek() != '"' && !self.is_at_end() {
+			if self.peek() == '\n' {
+				self.line += 1;
+			}
+			self.discard();
+		}
+
+		if self.is_at_end() {
+			return self.error_token("Unterminated string.");
+		}
+
+		self.discard(); // advance beyond the closing quote
+		self.make_token(TokenKind::String)
+	}
+
 	fn skip_whitespace(&mut self) {
 		loop {
 			let c = self.peek();
@@ -238,6 +254,7 @@ impl<'a> Iterator for Scanner<'a> {
 				true => self.make_token(TokenKind::GreaterEqual),
 				false => self.make_token(TokenKind::Greater)
 			},
+			'"' => self.consume_string(),
 			_ => self.error_token("Unexpected character.")
 		})
 	}
