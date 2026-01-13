@@ -296,6 +296,7 @@ impl<'a> Iterator for Scanner<'a> {
 			},
 			'"' => self.consume_string(),
 			'0'..='9' => self.consume_number(),
+			'a'..='z' | 'A'..='Z' | '_' => self.consume_identifier(),
 			_ => self.error_token("Unexpected character.")
 		})
 	}
@@ -329,7 +330,7 @@ mod tests {
 
 	#[test]
 	fn next_should_return_all_token_kinds() {
-		let source = "( ) { } ; , . - + / * != ! == = <= < >= > \"string\" 1.0 // comment";
+		let source = "( ) { } ; , . - + / * != ! == = <= < >= > \"string\" 1.0 identifier // comment";
 
 		let mut sut = Scanner::new(source);
 
@@ -354,6 +355,7 @@ mod tests {
 		assert!(matches!(sut.next().unwrap().kind, TokenKind::Greater));
 		assert!(matches!(sut.next().unwrap().kind, TokenKind::String));
 		assert!(matches!(sut.next().unwrap().kind, TokenKind::Number));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Identifier));
 		assert!(matches!(sut.next(), None));
 	}
 
