@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum TokenKind {
 
 	/* single character tokens */
@@ -196,7 +197,7 @@ impl<'a> Scanner<'a> {
 	}
 
 	fn skip_whitespace(&mut self) {
-		loop {
+		while !self.is_at_end() {
 			let c = self.peek();
 			match c {
 				'\r' | '\t' | ' ' => self.advance(),
@@ -206,7 +207,7 @@ impl<'a> Scanner<'a> {
 				},
 				'/' => {
 					if self.peek_next() == Some('/') {
-						while self.peek() != '\n' && !self.is_at_end() {
+						while !self.is_at_end() && self.peek() != '\n' {
 							self.advance();
 						}
 					} else {
@@ -259,12 +260,11 @@ impl<'a> Iterator for Scanner<'a> {
 	type Item = Token<'a>;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		self.current = self.start;
+		self.start = self.current;
+		self.skip_whitespace();
 		if self.is_at_end() {
 			return None;
 		}
-
-		self.skip_whitespace();
 
 		Some(match self.consume() {
 			'(' => self.make_token(TokenKind::LeftParen),
@@ -275,6 +275,7 @@ impl<'a> Iterator for Scanner<'a> {
 			',' => self.make_token(TokenKind::Comma),
 			'.' => self.make_token(TokenKind::Dot),
 			'-' => self.make_token(TokenKind::Minus),
+			'+' => self.make_token(TokenKind::Plus),
 			'/' => self.make_token(TokenKind::Slash),
 			'*' => self.make_token(TokenKind::Star),
 			'!' => match self.consume_if('=') {
@@ -309,7 +310,7 @@ fn is_digit_in_option(char_option: Option<char>) -> bool {
 }
 
 fn is_digit(character: char) -> bool {
-	match (character) {
+	match character {
 		'0'..='9' => true,
 		_ => false
 	}
@@ -320,4 +321,40 @@ fn is_alpha(character: char) -> bool {
 		'a'..='z' | 'A'..='Z' | '_' => true,
 		_ => false
 	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn next_should_return_all_token_kinds() {
+		let source = "( ) { } ; , . - + / * != ! == = <= < >= > \"string\" 1.0 // comment";
+
+		let mut sut = Scanner::new(source);
+
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::LeftParen));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::RightParen));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::LeftBrace));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::RightBrace));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Semicolon));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Comma));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Dot));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Minus));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Plus));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Slash));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Star));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::BangEqual));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Bang));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::EqualEqual));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Equal));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::LessEqual));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Less));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::GreaterEqual));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Greater));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::String));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Number));
+		assert!(matches!(sut.next(), None));
+	}
+
 }
