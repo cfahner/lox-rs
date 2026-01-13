@@ -87,8 +87,6 @@ pub enum TokenKind {
 
 	Error,
 
-	Eof,
-
 }
 
 pub struct Token<'a> {
