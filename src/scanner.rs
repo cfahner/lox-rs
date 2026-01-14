@@ -376,4 +376,16 @@ mod tests {
 		assert!(matches!(sut.next(), None));
 	}
 
+	#[test]
+	fn next_should_return_tokens_with_correct_line_numbers() {
+		let source = "line1\nline2\n//comment\nline4";
+
+		let mut sut = Scanner::new(source);
+
+		assert_eq!(sut.next().unwrap().line, 1);
+		assert_eq!(sut.next().unwrap().line, 2);
+		assert_eq!(sut.next().unwrap().line, 4);
+		assert!(matches!(sut.next(), None));
+	}
+
 }
