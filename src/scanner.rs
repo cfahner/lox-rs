@@ -388,4 +388,17 @@ mod tests {
 		assert!(matches!(sut.next(), None));
 	}
 
+	#[test]
+	fn next_should_return_tokens_with_correct_content() {
+		let source = "\"string\" 1 1.0 identifier";
+
+		let mut sut = Scanner::new(source);
+
+		assert_eq!(sut.next().unwrap().content, "\"string\"");
+		assert_eq!(sut.next().unwrap().content, "1");
+		assert_eq!(sut.next().unwrap().content, "1.0");
+		assert_eq!(sut.next().unwrap().content, "identifier");
+		assert!(matches!(sut.next(), None));
+	}
+
 }
