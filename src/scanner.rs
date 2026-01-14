@@ -223,7 +223,10 @@ impl<'a> Scanner<'a> {
 	}
 
 	fn peek(&self) -> char {
-		self.source[self.current] as char
+		match self.source.get(self.current) {
+			Some(byte) => *byte as char,
+			None => 0x00 as char
+		}
 	}
 
 	fn peek_next(&self) -> Option<char> {
@@ -258,8 +261,9 @@ impl<'a> Iterator for Scanner<'a> {
 	type Item = Token<'a>;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		self.start = self.current;
 		self.skip_whitespace();
+		self.start = self.current;
+
 		if self.is_at_end() {
 			return None;
 		}
@@ -354,6 +358,21 @@ mod tests {
 		assert!(matches!(sut.next().unwrap().kind, TokenKind::String));
 		assert!(matches!(sut.next().unwrap().kind, TokenKind::Number));
 		assert!(matches!(sut.next().unwrap().kind, TokenKind::Identifier));
+		assert!(matches!(sut.next(), None));
+	}
+
+	#[test]
+	fn next_should_return_keywords_over_identifiers() {
+		let source = "andy and classy class vary var";
+
+		let mut sut = Scanner::new(source);
+
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Identifier));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::And));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Identifier));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Class));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Identifier));
+		assert!(matches!(sut.next().unwrap().kind, TokenKind::Var));
 		assert!(matches!(sut.next(), None));
 	}
 
