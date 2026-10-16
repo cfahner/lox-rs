@@ -89,11 +89,11 @@ pub enum TokenKind {
 
 }
 
-pub struct Token<'a> {
+pub struct Token {
 
 	pub kind: TokenKind,
 
-	pub content: &'a str,
+	pub content: String,
 
 	pub line: u32,
 
@@ -107,7 +107,7 @@ pub struct Scanner<'a> {
 
 	current: usize,
 
-	line: u32,
+	pub line: u32,
 
 }
 
@@ -122,24 +122,26 @@ impl<'a> Scanner<'a> {
 		}
 	}
 
-	fn make_token(&self, kind: TokenKind) -> Token<'a> {
+	fn make_token(&self, kind: TokenKind) -> Token {
 		Token {
 			kind: kind,
 			// Safety: invalid sequences will already have been rejected before this point is reached
-			content: unsafe { std::str::from_utf8_unchecked(&self.source[self.start..self.current]) },
+			content: unsafe {
+				std::str::from_utf8_unchecked(&self.source[self.start..self.current]).to_owned()
+			},
 			line: self.line,
 		}
 	}
 
-	fn error_token(&self, message: &'a str) -> Token<'a> {
+	fn error_token(&self, message: &str) -> Token {
 		Token {
 			kind: TokenKind::Error,
-			content: message,
+			content: message.to_owned(),
 			line: self.line,
 		}
 	}
 
-	fn consume_identifier(&mut self) -> Token<'a> {
+	fn consume_identifier(&mut self) -> Token {
 		while is_alpha(self.peek()) || is_digit(self.peek()) {
 			self.advance();
 		}
@@ -166,7 +168,7 @@ impl<'a> Scanner<'a> {
 		})
 	}
 
-	fn consume_string(&mut self) -> Token<'a> {
+	fn consume_string(&mut self) -> Token {
 		while self.peek() != '"' && !self.is_at_end() {
 			if self.peek() == '\n' {
 				self.line += 1;
@@ -180,7 +182,7 @@ impl<'a> Scanner<'a> {
 		self.make_token(TokenKind::String)
 	}
 
-	fn consume_number(&mut self) -> Token<'a> {
+	fn consume_number(&mut self) -> Token {
 		while is_digit(self.peek()) {
 			self.advance();
 		}
@@ -258,7 +260,7 @@ impl<'a> Scanner<'a> {
 }
 
 impl<'a> Iterator for Scanner<'a> {
-	type Item = Token<'a>;
+	type Item = Token;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		self.skip_whitespace();
