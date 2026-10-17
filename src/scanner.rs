@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum TokenKind {
 
 	/* single character tokens */
@@ -89,6 +89,7 @@ pub enum TokenKind {
 
 }
 
+#[derive(Clone, Debug)]
 pub struct Token {
 
 	pub kind: TokenKind,
