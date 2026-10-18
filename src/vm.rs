@@ -7,7 +7,7 @@ use crate::op::*;
 use crate::value::Value;
 
 /// Possible error cases during chunk interpreting
-#[derive(PartialEq)] #[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum InterpretError {
 
 	/// Occurs when a chunk was badly formatted (eg. the bytes don't match with opcodes + operands)
