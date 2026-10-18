@@ -1,9 +1,11 @@
+mod ast;
 mod chunk;
 mod compiler;
 #[cfg(feature = "trace")]
 mod debug;
 mod rle;
 mod op;
+mod parser;
 mod scanner;
 mod value;
 mod vm;
@@ -54,9 +56,14 @@ fn repl() -> ExitCode {
 		}
 		buffer.clear();
 	}
-	ExitCode::Ok
 }
 
 fn interpret<const N: usize>(vm: &mut VM<N>, source: &str) -> Result<(), InterpretError> {
-	Ok(())
+	match compiler::compile(source) {
+		Ok(chunk) => vm.interpret(&chunk),
+		Err(error) => {
+			println!("{}", error);
+			Err(InterpretError::Compile)
+		}
+	}
 }
