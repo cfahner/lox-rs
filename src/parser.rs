@@ -1,6 +1,8 @@
 use std::fmt;
 
+use crate::ast::BinaryOp;
 use crate::ast::Expr;
+use crate::ast::UnaryOp;
 use crate::scanner::Scanner;
 use crate::scanner::Token;
 use crate::scanner::TokenKind;
@@ -83,6 +85,16 @@ impl fmt::Display for ParseError {
 
 }
 
+fn binary_op_from_token(token: &Token) -> Option<BinaryOp> {
+	match token.kind {
+		TokenKind::Plus => Some(BinaryOp::Add),
+		TokenKind::Minus => Some(BinaryOp::Subtract),
+		TokenKind::Star => Some(BinaryOp::Multiply),
+		TokenKind::Slash => Some(BinaryOp::Divide),
+		_ => None
+	}
+}
+
 pub struct StmtIterator<'src> {
 	scanner: Scanner<'src>,
 	current: Token,
@@ -106,13 +118,18 @@ impl<'src> StmtIterator<'src> {
 
 	fn parse_infix(&mut self, left: Expr, operator: Token) -> Result<Expr, ParseError> {
 		let precedence = Precedence::from_infix_token_kind(&operator.kind);
-
 		let right = self.parse_precedence(precedence.next())?;
+
+		let Some(binary_op) = binary_op_from_token(&operator) else {
+			let msg = format!("Expected binary operator, not `{}`", &operator.content);
+			return Err(ParseError::new_at_token(&operator, &msg));
+		};
 
 		Ok(Expr::Binary {
 			lhs: Box::new(left),
-			operator: operator,
+			op: binary_op,
 			rhs: Box::new(right),
+			line: operator.line,
 		})
 	}
 
@@ -123,8 +140,9 @@ impl<'src> StmtIterator<'src> {
 				_ => Err(ParseError::new_at_token(&token, "Expected valid number."))
 			},
 			TokenKind::Minus => Ok(Expr::Unary {
-				operator: token,
-				expr: Box::new(self.parse_precedence(Precedence::Unary)?)
+				op: UnaryOp::Negate,
+				expr: Box::new(self.parse_precedence(Precedence::Unary)?),
+				line: token.line,
 			}),
 			TokenKind::LeftParen => {
 				let expr = self.parse_precedence(Precedence::Assignment)?;
@@ -226,9 +244,9 @@ mod tests {
 		let result1 = order1.expression().unwrap();
 		let result2 = order2.expression().unwrap();
 
-		let Expr::Binary { operator: operator1, .. } = &result1 else { unreachable!(); };
-		let Expr::Binary { operator: operator2, .. } = &result2 else { unreachable!(); };
-		assert!(std::mem::discriminant(&operator1.kind) == std::mem::discriminant(&operator2.kind));
+		let Expr::Binary { op: op1, .. } = &result1 else { unreachable!(); };
+		let Expr::Binary { op: op2, .. } = &result2 else { unreachable!(); };
+		assert!(std::mem::discriminant(op1) == std::mem::discriminant(op2));
 	}
 
 	#[test]
@@ -239,10 +257,10 @@ mod tests {
 		let result1 = expr1.expression().unwrap();
 		let result2 = expr2.expression().unwrap();
 
-		let Expr::Binary { operator: operator1, .. } = &result1 else { unreachable!(); };
-		assert!(matches!(operator1.kind, TokenKind::Plus));
-		let Expr::Binary { operator: operator2, .. } = &result2 else { unreachable!(); };
-		assert!(matches!(operator2.kind, TokenKind::Star));
+		let Expr::Binary { op: op1, .. } = &result1 else { unreachable!(); };
+		assert!(matches!(op1, BinaryOp::Add));
+		let Expr::Binary { op: op2, .. } = &result2 else { unreachable!(); };
+		assert!(matches!(op2, BinaryOp::Multiply));
 	}
 
 	#[test]
@@ -262,6 +280,15 @@ mod tests {
 		let result = sut.expression();
 
 		assert!(matches!(result, Err(error) if error.context == "at end"));
+	}
+
+	#[test]
+	fn expression_should_error_if_group_unclosed() {
+		let mut sut = StmtIterator::new("(5 + 5").unwrap();
+
+		let result = sut.expression();
+
+		assert!(result.is_err());
 	}
 
 }

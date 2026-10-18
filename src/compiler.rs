@@ -1,9 +1,10 @@
+use crate::ast::BinaryOp;
 use crate::ast::Expr;
+use crate::ast::UnaryOp;
 use crate::chunk::Chunk;
 use crate::op::*;
 use crate::parser::ParseError;
 use crate::parser::StmtIterator;
-use crate::scanner::TokenKind;
 use crate::value::Value;
 
 pub fn compile(source: &str) -> Result<Chunk, ParseError> {
@@ -22,23 +23,21 @@ pub fn compile(source: &str) -> Result<Chunk, ParseError> {
 fn compile_expr(chunk: &mut Chunk, stmt: &Expr) {
 	match stmt {
 		Expr::Number { number, line } => chunk.write_constant(Value::new(*number), *line),
-		Expr::Unary { operator, expr } => match operator.kind {
-			TokenKind::Minus => {
+		Expr::Unary { op, expr, line } => match op {
+			UnaryOp::Negate => {
 				compile_expr(chunk, &*expr);
-				chunk.write(OP_NEGATE, operator.line);
+				chunk.write(OP_NEGATE, *line);
 			},
-			_ => unreachable!()
 		},
-		Expr::Binary { lhs, operator, rhs } => {
+		Expr::Binary { lhs, op, rhs, line } => {
 			compile_expr(chunk, &*lhs);
 			compile_expr(chunk, &*rhs);
-			chunk.write(match operator.kind {
-				TokenKind::Plus => OP_ADD,
-				TokenKind::Minus => OP_SUBTRACT,
-				TokenKind::Star => OP_MULTIPLY,
-				TokenKind::Slash => OP_DIVIDE,
-				_ => unreachable!()
-			}, operator.line);
-		}
+			chunk.write(match op {
+				BinaryOp::Add => OP_ADD,
+				BinaryOp::Subtract => OP_SUBTRACT,
+				BinaryOp::Multiply => OP_MULTIPLY,
+				BinaryOp::Divide => OP_DIVIDE,
+			}, *line);
+		},
 	}
 }

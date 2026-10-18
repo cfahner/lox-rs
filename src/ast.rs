@@ -1,4 +1,13 @@
-use crate::scanner::Token;
+pub enum UnaryOp {
+	Negate,
+}
+
+pub enum BinaryOp {
+	Add,
+	Subtract,
+	Multiply,
+	Divide,
+}
 
 pub enum Expr {
 	Number {
@@ -7,13 +16,15 @@ pub enum Expr {
 	},
 
 	Unary {
-		operator: Token,
+		op: UnaryOp,
 		expr: Box<Expr>,
+		line: u32,
 	},
 
 	Binary {
 		lhs: Box<Expr>,
-		operator: Token,
+		op: BinaryOp,
 		rhs: Box<Expr>,
-	}
+		line: u32,
+	},
 }
