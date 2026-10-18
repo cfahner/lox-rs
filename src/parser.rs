@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::ast::Expr;
 use crate::scanner::Scanner;
 use crate::scanner::Token;
@@ -60,7 +62,7 @@ pub struct ParseError {
 impl ParseError {
 
 	pub fn new_at_token(token: &Token, message: &str) -> Self {
-		Self::new(token.line, &token.content, message)
+		Self::new(token.line, &format!("at `{}`", &token.content), message)
 	}
 
 	pub fn new_at_end(line: u32, message: &str) -> Self {
@@ -69,6 +71,14 @@ impl ParseError {
 
 	fn new(line: u32, context: &str, message: &str) -> Self {
 		Self { line, context: context.to_owned(), message: message.to_owned() }
+	}
+
+}
+
+impl fmt::Display for ParseError {
+
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "[line {}] Error {}: {}", self.line, self.context, self.message)
 	}
 
 }
@@ -109,7 +119,7 @@ impl<'src> StmtIterator<'src> {
 	fn parse_prefix(&mut self, token: Token) -> Result<Expr, ParseError> {
 		match token.kind {
 			TokenKind::Number => match token.content.parse::<f64>() {
-				Ok(number) => Ok(Expr::Number(number)),
+				Ok(number) => Ok(Expr::Number { number, line: token.line }),
 				_ => Err(ParseError::new_at_token(&token, "Expected valid number."))
 			},
 			TokenKind::Minus => Ok(Expr::Unary {
@@ -137,7 +147,8 @@ impl<'src> StmtIterator<'src> {
 		Ok(left)
 	}
 
-	fn expression(&mut self) -> Result<Expr, ParseError> {
+	// Temporarily public while statement parsing is not implemented
+	pub fn expression(&mut self) -> Result<Expr, ParseError> {
 		self.parse_precedence(Precedence::Assignment)
 	}
 

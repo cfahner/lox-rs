@@ -1,7 +1,10 @@
 use crate::scanner::Token;
 
 pub enum Expr {
-	Number(f64),
+	Number {
+		number: f64,
+		line: u32,
+	},
 
 	Unary {
 		operator: Token,
