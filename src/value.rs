@@ -21,6 +21,15 @@ impl Value {
 		}
 	}
 
+	pub fn equals(&self, other: &Self) -> bool {
+		match (self, other) {
+			(Value::Nil, Value::Nil) => true,
+			(Value::Bool(bool1), Value::Bool(bool2)) => bool1 == bool2,
+			(Value::Number(num1), Value::Number(num2)) => num1 == num2,
+			_ => false
+		}
+	}
+
 }
 
 impl fmt::Display for Value {
@@ -73,7 +82,7 @@ mod tests {
 
 	#[test]
 	fn is_falsey_should_return_expected_result() {
-		let values = [
+		let cases = [
 			(Value::Nil, true),
 			(Value::Bool(true), false),
 			(Value::Bool(false), true),
@@ -81,10 +90,29 @@ mod tests {
 			(Value::Number(-1.25), false),
 		];
 
-		for (sut, expected_result) in values {
+		for (sut, expected_result) in cases {
 			let result = sut.is_falsey();
 
-			assert_eq!(result, expected_result);
+			assert_eq!(expected_result, result);
+		}
+	}
+
+	#[test]
+	fn equals_should_return_expected_result() {
+		let cases = [
+			(Value::Nil, Value::Nil, true),
+			(Value::Bool(true), Value::Bool(true), true),
+			(Value::Bool(false), Value::Bool(true), false),
+			(Value::Nil, Value::Number(0.0), false),
+			(Value::Number(1.0), Value::Number(-1.0), false),
+			(Value::Number(0.0), Value::Number(0.0), true),
+			(Value::Bool(false), Value::Number(0.0), false)
+		];
+
+		for (a, b, expected_result) in cases {
+			let result = a.equals(&b);
+
+			assert_eq!(expected_result, result);
 		}
 	}
 
