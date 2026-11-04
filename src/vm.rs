@@ -90,8 +90,11 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 				OP_TRUE => self.op_push_literal(Value::Bool(true)),
 				OP_FALSE => self.op_push_literal(Value::Bool(false)),
 				OP_EQUAL => self.op_equal(),
+				OP_NOT_EQUAL => self.op_not_equal(),
 				OP_GREATER => self.op_binary_numeric(|l, r| Value::Bool(l > r)),
+				OP_GREATER_EQUAL => self.op_binary_numeric(|l, r| Value::Bool(l >= r)),
 				OP_LESS => self.op_binary_numeric(|l, r| Value::Bool(l < r)),
+				OP_LESS_EQUAL => self.op_binary_numeric(|l, r| Value::Bool(l <= r)),
 				OP_ADD => self.op_binary_numeric(|l, r| Value::Number(l + r)),
 				OP_SUBTRACT => self.op_binary_numeric(|l, r| Value::Number(l - r)),
 				OP_MULTIPLY => self.op_binary_numeric(|l, r| Value::Number(l * r)),
@@ -141,6 +144,13 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 	}
 
 	#[inline]
+	fn op_not_equal(&mut self) -> Result<(), &str> {
+		self.stack_replace_top_2::<&str>(|l, r| {
+			Ok(Value::Bool(!l.equals(r)))
+		})
+	}
+
+	#[inline]
 	fn op_binary_numeric(&mut self, operate: impl FnOnce(f64, f64) -> Value) -> Result<(), &str> {
 		self.stack_replace_top_2(|l, r| {
 			match (l, r) {
@@ -154,29 +164,17 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 
 	#[inline]
 	fn op_not(&mut self) -> Result<(), &str> {
-		self.ensure_stack_filled();
-
-		// Safety: ensure_stack_filled()
-		unsafe {
-			*self.stack_top.offset(-1) = Value::Bool((&*self.stack_top.offset(-1)).is_falsey());
-			Ok(())
-		}
+		self.stack_replace_top::<&str>(|v| Ok(Value::Bool(v.is_falsey())))
 	}
 
 	#[inline]
 	fn op_negate(&mut self) -> Result<(), &str> {
-		self.ensure_stack_filled();
-
-		// Safety: ensure_stack_filled()
-		unsafe {
-			match &*self.stack_top.offset(-1) {
-				Value::Number(num) => {
-					*self.stack_top.offset(-1) = Value::Number(-num);
-					Ok(())
-				},
+		self.stack_replace_top(|v| {
+			match v {
+				Value::Number(num) => Ok(Value::Number(-num)),
 				_ => Err("Operand must be a number.")
 			}
-		}
+		})
 	}
 
 	#[inline]
@@ -225,6 +223,17 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 			let new_value = replacer(&*self.stack_top.offset(-2), &*self.stack_top.offset(-1))?;
 			self.stack_top = self.stack_top.offset(-1);
 			*self.stack_top.offset(-1) = new_value;
+			Ok(())
+		}
+	}
+
+	#[inline]
+	fn stack_replace_top<TErr>(&mut self, replacer: impl FnOnce(&Value) -> Result<Value, TErr>) -> Result<(), TErr> {
+		self.ensure_stack_filled();
+
+		// Safety: ensure_stack_filled() does the safety check
+		unsafe {
+			*self.stack_top.offset(-1) = replacer(&*self.stack_top.offset(-1))?;
 			Ok(())
 		}
 	}
