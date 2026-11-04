@@ -52,6 +52,12 @@ fn repl() -> ExitCode {
 			return ExitCode::IoErr;
 		};
 		if let Err(interpret_error) = interpret(&mut vm, &buffer) {
+			match &interpret_error {
+				InterpretError::InvalidOperation { message, line } => {
+					println!("[:{}] Invalid operation: {}", line, message);
+				}
+				_ => println!("Compile error")
+			}
 			return interpret_error.to_exit_code();
 		}
 		buffer.clear();
