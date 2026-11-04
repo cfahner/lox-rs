@@ -46,6 +46,8 @@ impl Precedence {
 	pub fn from_infix_token_kind(token_kind: &TokenKind) -> Self {
 		use TokenKind::*;
 		match token_kind {
+			BangEqual | EqualEqual => Self::Equality,
+			Greater | GreaterEqual | Less | LessEqual => Self::Comparison,
 			Plus | Minus => Self::Term,
 			Star | Slash => Self::Factor,
 			_ => Self::None
@@ -91,6 +93,12 @@ fn binary_op_from_token_kind(kind: &TokenKind) -> BinaryOp {
 		TokenKind::Minus => BinaryOp::Subtract,
 		TokenKind::Star => BinaryOp::Multiply,
 		TokenKind::Slash => BinaryOp::Divide,
+		TokenKind::EqualEqual => BinaryOp::Equal,
+		TokenKind::BangEqual => BinaryOp::NotEqual,
+		TokenKind::Greater => BinaryOp::Greater,
+		TokenKind::GreaterEqual => BinaryOp::GreaterEqual,
+		TokenKind::Less => BinaryOp::Less,
+		TokenKind::LessEqual => BinaryOp::LessEqual,
 		_ => panic!("Could not convert token kind to binary op")
 	}
 }

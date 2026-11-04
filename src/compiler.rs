@@ -39,12 +39,18 @@ fn compile_expr(chunk: &mut Chunk, stmt: &Expr) {
 		Expr::Binary { lhs, op, rhs, line } => {
 			compile_expr(chunk, &*lhs);
 			compile_expr(chunk, &*rhs);
-			chunk.write(match op {
-				BinaryOp::Add => OP_ADD,
-				BinaryOp::Subtract => OP_SUBTRACT,
-				BinaryOp::Multiply => OP_MULTIPLY,
-				BinaryOp::Divide => OP_DIVIDE,
-			}, *line);
+			match op {
+				BinaryOp::Add => chunk.write(OP_ADD, *line),
+				BinaryOp::Subtract => chunk.write(OP_SUBTRACT, *line),
+				BinaryOp::Multiply => chunk.write(OP_MULTIPLY, *line),
+				BinaryOp::Divide => chunk.write(OP_DIVIDE, *line),
+				BinaryOp::Equal => chunk.write(OP_EQUAL, *line),
+				BinaryOp::NotEqual => chunk.write_twice(OP_EQUAL, OP_NOT, *line),
+				BinaryOp::Greater => chunk.write(OP_GREATER, *line),
+				BinaryOp::GreaterEqual => chunk.write_twice(OP_LESS, OP_NOT, *line),
+				BinaryOp::Less => chunk.write(OP_LESS, *line),
+				BinaryOp::LessEqual => chunk.write_twice(OP_GREATER, OP_NOT, *line)
+			};
 		},
 	}
 }

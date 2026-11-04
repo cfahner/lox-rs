@@ -89,10 +89,13 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 				OP_NIL => self.op_push_literal(Value::Nil),
 				OP_TRUE => self.op_push_literal(Value::Bool(true)),
 				OP_FALSE => self.op_push_literal(Value::Bool(false)),
-				OP_ADD => self.op_binary_arithmetic(|l, r| l + r),
-				OP_SUBTRACT => self.op_binary_arithmetic(|l, r| l - r),
-				OP_MULTIPLY => self.op_binary_arithmetic(|l, r| l * r),
-				OP_DIVIDE => self.op_binary_arithmetic(|l, r| l / r),
+				OP_EQUAL => self.op_equal(),
+				OP_GREATER => self.op_binary_numeric(|l, r| Value::Bool(l > r)),
+				OP_LESS => self.op_binary_numeric(|l, r| Value::Bool(l < r)),
+				OP_ADD => self.op_binary_numeric(|l, r| Value::Number(l + r)),
+				OP_SUBTRACT => self.op_binary_numeric(|l, r| Value::Number(l - r)),
+				OP_MULTIPLY => self.op_binary_numeric(|l, r| Value::Number(l * r)),
+				OP_DIVIDE => self.op_binary_numeric(|l, r| Value::Number(l / r)),
 				OP_NOT => self.op_not(),
 				OP_NEGATE => self.op_negate(),
 				OP_RETURN => self.op_return(),
@@ -131,20 +134,22 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 	}
 
 	#[inline]
-	fn op_binary_arithmetic(&mut self, arithmetic_op: impl FnOnce(f64, f64) -> f64) -> Result<(), &str> {
-		self.ensure_stack_filled();
+	fn op_equal(&mut self) -> Result<(), &str> {
+		self.stack_replace_top_2::<&str>(|l, r| {
+			Ok(Value::Bool(l.equals(r)))
+		})
+	}
 
-		// Safety: ensure_stack_filled()
-		unsafe {
-			match (&*self.stack_top.offset(-2), &*self.stack_top.offset(-1)) {
+	#[inline]
+	fn op_binary_numeric(&mut self, operate: impl FnOnce(f64, f64) -> Value) -> Result<(), &str> {
+		self.stack_replace_top_2(|l, r| {
+			match (l, r) {
 				(Value::Number(l_num), Value::Number(r_num)) => {
-					self.stack_top = self.stack_top.offset(-1);
-					*self.stack_top.offset(-1) = Value::Number(arithmetic_op(*l_num, *r_num));
-					Ok(())
-				}
+					Ok(operate(*l_num, *r_num))
+				},
 				_ => Err("Operands must be numbers.")
 			}
-		}
+		})
 	}
 
 	#[inline]
@@ -208,6 +213,19 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 		unsafe {
 			self.stack_top = self.stack_top.offset(-1);
 			&mut *self.stack_top
+		}
+	}
+
+	#[inline]
+	fn stack_replace_top_2<TErr>(&mut self, replacer: impl FnOnce(&Value, &Value) -> Result<Value, TErr>) -> Result<(), TErr> {
+		self.ensure_stack_filled();
+
+		// Safety: ensure_stack_filled() does the safety check
+		unsafe {
+			let new_value = replacer(&*self.stack_top.offset(-2), &*self.stack_top.offset(-1))?;
+			self.stack_top = self.stack_top.offset(-1);
+			*self.stack_top.offset(-1) = new_value;
+			Ok(())
 		}
 	}
 

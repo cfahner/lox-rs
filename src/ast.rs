@@ -8,6 +8,12 @@ pub enum BinaryOp {
 	Subtract,
 	Multiply,
 	Divide,
+	Equal,
+	NotEqual,
+	Greater,
+	GreaterEqual,
+	Less,
+	LessEqual
 }
 
 pub enum Expr {
