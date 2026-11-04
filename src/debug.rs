@@ -6,6 +6,9 @@ use crate::value::Value;
 pub fn op_to_string(op: u8) -> &'static str {
 	match op {
 		OP_CONSTANT => "OP_CONSTANT",
+		OP_NIL => "OP_NIL",
+		OP_TRUE => "OP_TRUE",
+		OP_FALSE => "OP_FALSE",
 		OP_ADD => "OP_ADD",
 		OP_SUBTRACT => "OP_SUBTRACT",
 		OP_MULTIPLY => "OP_MULTIPLY",
