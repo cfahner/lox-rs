@@ -139,6 +139,9 @@ impl<'src> StmtIterator<'src> {
 				Ok(number) => Ok(Expr::Number { number, line: token.line }),
 				_ => Err(ParseError::new_at_token(&token, "Expected valid number."))
 			},
+			TokenKind::Nil => Ok(Expr::Nil),
+			TokenKind::True => Ok(Expr::True),
+			TokenKind::False => Ok(Expr::False),
 			TokenKind::Minus => Ok(Expr::Unary {
 				op: UnaryOp::Negate,
 				expr: Box::new(self.parse_precedence(Precedence::Unary)?),

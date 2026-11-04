@@ -83,6 +83,9 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 
 			let op_result = match opcode {
 				OP_CONSTANT => self.op_constant(chunk, op_ptr),
+				OP_NIL => self.op_push_literal(Value::Nil),
+				OP_TRUE => self.op_push_literal(Value::Bool(true)),
+				OP_FALSE => self.op_push_literal(Value::Bool(false)),
 				OP_ADD => self.op_binary_arithmetic(|l, r| l + r),
 				OP_SUBTRACT => self.op_binary_arithmetic(|l, r| l - r),
 				OP_MULTIPLY => self.op_binary_arithmetic(|l, r| l * r),
@@ -114,6 +117,12 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 		// Safety: run() loop has already checked safety of ptr
 		let const_id = unsafe { *ptr.add(1) };
 		self.stack_push(chunk.get_constant(const_id as usize).clone());
+		Ok(())
+	}
+
+	#[inline]
+	fn op_push_literal(&mut self, value: Value) -> Result<(), &str> {
+		self.stack_push(value);
 		Ok(())
 	}
 

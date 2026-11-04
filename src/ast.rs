@@ -15,6 +15,10 @@ pub enum Expr {
 		line: u32,
 	},
 
+	Nil,
+	True,
+	False,
+
 	Unary {
 		op: UnaryOp,
 		expr: Box<Expr>,

@@ -23,6 +23,9 @@ pub fn compile(source: &str) -> Result<Chunk, ParseError> {
 fn compile_expr(chunk: &mut Chunk, stmt: &Expr) {
 	match stmt {
 		Expr::Number { number, line } => chunk.write_constant(Value::Number(*number), *line),
+		Expr::Nil => chunk.write_last_line(OP_NIL),
+		Expr::True => chunk.write_last_line(OP_TRUE),
+		Expr::False => chunk.write_last_line(OP_FALSE),
 		Expr::Unary { op, expr, line } => match op {
 			UnaryOp::Negate => {
 				compile_expr(chunk, &*expr);
