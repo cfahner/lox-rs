@@ -10,10 +10,14 @@ pub enum Value {
 impl Value {
 
 	pub fn clone(&self) -> Self {
+		unsafe { std::mem::transmute_copy(self) }
+	}
+
+	pub fn is_falsey(&self) -> bool {
 		match self {
-			Value::Nil => Value::Nil,
-			Value::Bool(bool_val) => Value::Bool(*bool_val),
-			Value::Number(num_val) => Value::Number(*num_val),
+			Value::Nil => true,
+			Value::Bool(bool_val) => !bool_val,
+			_ => false
 		}
 	}
 
@@ -45,6 +49,43 @@ impl ValueArray {
 
 	pub fn write(&mut self, value: Value) {
 		self.values.push(value);
+	}
+
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn copy_should_create_new_value() {
+		let number = 50.0;
+		let sut = Value::Number(number);
+
+		let result = sut.clone();
+
+		assert!(!std::ptr::eq(std::ptr::from_ref(&sut), std::ptr::from_ref(&result)));
+		match result {
+			Value::Number(clone_number) => assert_eq!(number, clone_number),
+			_ => unreachable!()
+		}
+	}
+
+	#[test]
+	fn is_falsey_should_return_expected_result() {
+		let values = [
+			(Value::Nil, true),
+			(Value::Bool(true), false),
+			(Value::Bool(false), true),
+			(Value::Number(0.0), false),
+			(Value::Number(-1.25), false),
+		];
+
+		for (sut, expected_result) in values {
+			let result = sut.is_falsey();
+
+			assert_eq!(result, expected_result);
+		}
 	}
 
 }
