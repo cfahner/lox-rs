@@ -28,6 +28,13 @@ impl<T: PartialEq> RunLengthEncoder<T> {
 		None
 	}
 
+	pub fn last(&self) -> Option<&T> {
+		match self.values.last() {
+			Some(v) => Some(&v.0),
+			None => None
+		}
+	}
+
 }
 
 #[cfg(test)]
