@@ -95,6 +95,14 @@ fn binary_op_from_token(token: &Token) -> Option<BinaryOp> {
 	}
 }
 
+fn unary_op_from_token_kind(kind: &TokenKind) -> UnaryOp {
+	match kind {
+		TokenKind::Minus => UnaryOp::Negate,
+		TokenKind::Bang => UnaryOp::Not,
+		_ => panic!("Could not convert token kind to unary op")
+	}
+}
+
 pub struct StmtIterator<'src> {
 	scanner: Scanner<'src>,
 	current: Token,
@@ -142,8 +150,8 @@ impl<'src> StmtIterator<'src> {
 			TokenKind::Nil => Ok(Expr::Nil),
 			TokenKind::True => Ok(Expr::True),
 			TokenKind::False => Ok(Expr::False),
-			TokenKind::Minus => Ok(Expr::Unary {
-				op: UnaryOp::Negate,
+			TokenKind::Minus | TokenKind::Bang => Ok(Expr::Unary {
+				op: unary_op_from_token_kind(&token.kind),
 				expr: Box::new(self.parse_precedence(Precedence::Unary)?),
 				line: token.line,
 			}),

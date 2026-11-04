@@ -1,5 +1,6 @@
 pub enum UnaryOp {
 	Negate,
+	Not,
 }
 
 pub enum BinaryOp {

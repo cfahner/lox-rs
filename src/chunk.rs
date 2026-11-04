@@ -94,7 +94,7 @@ mod tests {
 		let mut chunk = Chunk::new();
 
 		for i in 0..(short_limit + 1) {
-			chunk.write_constant(Value::new(1.0), i as u32);
+			chunk.write_constant(Value::Number(1.0), i as u32);
 		}
 
 		// result should be 255 OP_CONSTANT's followed by 1 byte indices (510 bytes total)

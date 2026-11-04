@@ -13,6 +13,9 @@ pub enum InterpretError {
 	/// Occurs when a chunk was badly formatted (eg. the bytes don't match with opcodes + operands)
 	BadChunk,
 
+	/// Occurs when an unknown opcode was encountered
+	UnknownOpcode(u8),
+
 	Compile,
 
 	/// Occurs for invalid operations at runtime (eg. trying to negate a value that is not a number)
@@ -27,7 +30,7 @@ impl InterpretError {
 
 	pub fn to_exit_code(&self) -> ExitCode {
 		match self {
-			Self::BadChunk => ExitCode::Software,
+			Self::BadChunk | Self::UnknownOpcode(_) => ExitCode::Software,
 			Self::Compile => ExitCode::DataErr,
 			Self::InvalidOperation { message: _, line: _ } => ExitCode::Software,
 		}
@@ -90,10 +93,11 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 				OP_SUBTRACT => self.op_binary_arithmetic(|l, r| l - r),
 				OP_MULTIPLY => self.op_binary_arithmetic(|l, r| l * r),
 				OP_DIVIDE => self.op_binary_arithmetic(|l, r| l / r),
+				OP_NOT => self.op_not(),
 				OP_NEGATE => self.op_negate(),
 				OP_RETURN => self.op_return(),
 				OP_CONSTANT_LONG => self.op_constant_long(chunk, op_ptr),
-				_ => return Err(InterpretError::BadChunk)
+				_ => return Err(InterpretError::UnknownOpcode(opcode))
 			};
 
 			op_result.map_err(|msg| {
@@ -140,6 +144,17 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 				}
 				_ => Err("Operands must be numbers.")
 			}
+		}
+	}
+
+	#[inline]
+	fn op_not(&mut self) -> Result<(), &str> {
+		self.ensure_stack_filled();
+
+		// Safety: ensure_stack_filled()
+		unsafe {
+			*self.stack_top.offset(-1) = Value::Bool((&*self.stack_top.offset(-1)).is_falsey());
+			Ok(())
 		}
 	}
 
@@ -241,7 +256,7 @@ mod tests {
 		let mut chunk = Chunk::new();
 		for i in 0..9 {
 			print!("{i:}");
-			chunk.write_constant(Value::new(1.0), 1);
+			chunk.write_constant(Value::Number(1.0), 1);
 		}
 		let mut sut = VM::<8>::new();
 
@@ -252,6 +267,15 @@ mod tests {
 	fn interpret_should_panic_when_popping_empty_stack() {
 		let mut chunk = Chunk::new();
 		chunk.write(OP_ADD, 1);
+		let mut sut = VM::<8>::new();
+
+		let _ = sut.interpret(&chunk);
+	}
+
+	#[test] #[should_panic]
+	fn interpret_should_panic_when_negating_empty_stack() {
+		let mut chunk = Chunk::new();
+		chunk.write(OP_NEGATE, 1);
 		let mut sut = VM::<8>::new();
 
 		let _ = sut.interpret(&chunk);

@@ -31,6 +31,10 @@ fn compile_expr(chunk: &mut Chunk, stmt: &Expr) {
 				compile_expr(chunk, &*expr);
 				chunk.write(OP_NEGATE, *line);
 			},
+			UnaryOp::Not => {
+				compile_expr(chunk, &*expr);
+				chunk.write(OP_NOT, *line);
+			}
 		},
 		Expr::Binary { lhs, op, rhs, line } => {
 			compile_expr(chunk, &*lhs);
