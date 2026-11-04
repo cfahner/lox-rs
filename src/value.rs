@@ -24,8 +24,8 @@ impl fmt::Display for Value {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		match self {
 			Value::Nil => write!(f, "nil"),
-			Value::Bool(bool_val) => write!(f, "bool({})", bool_val),
-			Value::Number(num_val) => write!(f, "number({})", num_val),
+			Value::Bool(bool_val) => write!(f, "{}", bool_val),
+			Value::Number(num_val) => write!(f, "{}", num_val),
 		}
 	}
 
