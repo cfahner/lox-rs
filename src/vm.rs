@@ -15,7 +15,11 @@ pub enum InterpretError {
 
 	Compile,
 
-	Runtime,
+	/// Occurs for invalid operations at runtime (eg. trying to negate a value that is not a number)
+	InvalidOperation {
+		message: String,
+		line: u32,
+	},
 
 }
 
@@ -25,7 +29,7 @@ impl InterpretError {
 		match self {
 			Self::BadChunk => ExitCode::Software,
 			Self::Compile => ExitCode::DataErr,
-			Self::Runtime => ExitCode::Software,
+			Self::InvalidOperation { message: _, line: _ } => ExitCode::Software,
 		}
 	}
 
@@ -42,7 +46,7 @@ pub struct VM<const N_STACK_SIZE: usize> {
 impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 
 	pub fn new() -> Self {
-		Self { stack: [Value::new(0.0);N_STACK_SIZE], stack_top: std::ptr::null_mut() }
+		Self { stack: [const { Value::Nil };N_STACK_SIZE], stack_top: std::ptr::null_mut() }
 	}
 
 	pub fn interpret(&mut self, chunk: &Chunk) -> Result<(), InterpretError> {
@@ -62,6 +66,7 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 	fn run(&mut self, chunk: &Chunk, ptr_range: Range<*const u8>) -> Result<(), InterpretError> {
 		// ip is modified a lot and so is kept as a local variable to keep it close / cacheable
 		let Range { start: mut ip, end: end_ptr } = ptr_range;
+
 		loop {
 			// create a copy of the pointer to the opcode with operands
 			let op_ptr = ip;
@@ -75,17 +80,28 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 			if ip > end_ptr {
 				return Err(InterpretError::BadChunk); // ip went out of bounds
 			}
-			match opcode {
+
+			let op_result = match opcode {
 				OP_CONSTANT => self.op_constant(chunk, op_ptr),
-				OP_ADD => self.op_add(),
-				OP_SUBTRACT => self.op_subtract(),
-				OP_MULTIPLY => self.op_multiply(),
-				OP_DIVIDE => self.op_divide(),
+				OP_ADD => self.op_binary_arithmetic(|l, r| l + r),
+				OP_SUBTRACT => self.op_binary_arithmetic(|l, r| l - r),
+				OP_MULTIPLY => self.op_binary_arithmetic(|l, r| l * r),
+				OP_DIVIDE => self.op_binary_arithmetic(|l, r| l / r),
 				OP_NEGATE => self.op_negate(),
 				OP_RETURN => self.op_return(),
 				OP_CONSTANT_LONG => self.op_constant_long(chunk, op_ptr),
 				_ => return Err(InterpretError::BadChunk)
-			}
+			};
+
+			op_result.map_err(|msg| {
+				// Safety: offset_from() is called within the same allocation range
+				let offset: usize = unsafe { ip.offset_from(ptr_range.start).try_into().unwrap() };
+				InterpretError::InvalidOperation {
+					message: msg.to_owned(),
+					line: chunk.find_line(offset).unwrap()
+				}
+			})?;
+
 			if ip >= end_ptr { // ip can't be greater than, but greater-check is added for safety
 				break;
 			}
@@ -94,52 +110,59 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 	}
 
 	#[inline]
-	fn op_constant(&mut self, chunk: &Chunk, ptr: *const u8) {
+	fn op_constant(&mut self, chunk: &Chunk, ptr: *const u8) -> Result<(), &str> {
 		// Safety: run() loop has already checked safety of ptr
 		let const_id = unsafe { *ptr.add(1) };
 		self.stack_push(chunk.get_constant(const_id as usize).clone());
+		Ok(())
 	}
 
 	#[inline]
-	fn op_add(&mut self) {
-		let b = self.stack_pop();
-		unsafe { (*self.stack_top.offset(-1)).add(&b); }
+	fn op_binary_arithmetic(&mut self, arithmetic_op: impl FnOnce(f64, f64) -> f64) -> Result<(), &str> {
+		self.ensure_stack_filled();
+
+		// Safety: ensure_stack_filled()
+		unsafe {
+			match (&*self.stack_top.offset(-2), &*self.stack_top.offset(-1)) {
+				(Value::Number(l_num), Value::Number(r_num)) => {
+					self.stack_top = self.stack_top.offset(-1);
+					*self.stack_top.offset(-1) = Value::Number(arithmetic_op(*l_num, *r_num));
+					Ok(())
+				}
+				_ => Err("Operands must be numbers.")
+			}
+		}
 	}
 
 	#[inline]
-	fn op_subtract(&mut self) {
-		let b = self.stack_pop();
-		unsafe { (*self.stack_top.offset(-1)).subtract(&b); }
+	fn op_negate(&mut self) -> Result<(), &str> {
+		self.ensure_stack_filled();
+
+		// Safety: ensure_stack_filled()
+		unsafe {
+			match &*self.stack_top.offset(-1) {
+				Value::Number(num) => {
+					*self.stack_top.offset(-1) = Value::Number(-num);
+					Ok(())
+				},
+				_ => Err("Operand must be a number.")
+			}
+		}
 	}
 
 	#[inline]
-	fn op_multiply(&mut self) {
-		let b = self.stack_pop();
-		unsafe { (*self.stack_top.offset(-1)).multiply(&b); }
-	}
-
-	#[inline]
-	fn op_divide(&mut self) {
-		let b = self.stack_pop();
-		unsafe { (*self.stack_top.offset(-1)).divide(&b); }
-	}
-
-	#[inline]
-	fn op_negate(&mut self) {
-		unsafe { (*self.stack_top.offset(-1)).negate(); }
-	}
-
-	#[inline]
-	fn op_return(&mut self) {
+	fn op_return(&mut self) -> Result<(), &str> {
 		println!("{}", self.stack_pop());
+		Ok(())
 	}
 
 	#[inline]
-	fn op_constant_long(&mut self, chunk: &Chunk, ptr: *const u8) {
+	fn op_constant_long(&mut self, chunk: &Chunk, ptr: *const u8) -> Result<(), &str> {
 		// Safety: run() loop has already checked safety of ptr
 		let const_id_bytes: [u8;4] = unsafe { [ 0, *ptr.add(1), *ptr.add(2), *ptr.add(3) ] };
 		let const_id = u32::from_be_bytes(const_id_bytes);
 		self.stack_push(chunk.get_constant(const_id as usize).clone());
+		Ok(())
 	}
 
 	#[inline]
@@ -154,13 +177,20 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 	}
 
 	#[inline]
-	fn stack_pop(&mut self) -> Value {
-		if self.stack_top == self.stack.as_mut_ptr() {
-			panic!("Stack underflow");
-		}
+	fn stack_pop(&mut self) -> &mut Value {
+		self.ensure_stack_filled();
+
+		// Safety: already checked against the floor position above
 		unsafe {
 			self.stack_top = self.stack_top.offset(-1);
-			*self.stack_top
+			&mut *self.stack_top
+		}
+	}
+
+	#[inline]
+	fn ensure_stack_filled(&self) {
+		if self.stack_top as *const Value == self.stack.as_ptr() {
+			panic!("Stack underflow");
 		}
 	}
 

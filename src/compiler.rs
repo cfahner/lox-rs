@@ -22,7 +22,7 @@ pub fn compile(source: &str) -> Result<Chunk, ParseError> {
 
 fn compile_expr(chunk: &mut Chunk, stmt: &Expr) {
 	match stmt {
-		Expr::Number { number, line } => chunk.write_constant(Value::new(*number), *line),
+		Expr::Number { number, line } => chunk.write_constant(Value::Number(*number), *line),
 		Expr::Unary { op, expr, line } => match op {
 			UnaryOp::Negate => {
 				compile_expr(chunk, &*expr);
