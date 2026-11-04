@@ -52,12 +52,7 @@ fn repl() -> ExitCode {
 			return ExitCode::IoErr;
 		};
 		if let Err(interpret_error) = interpret(&mut vm, &buffer) {
-			match &interpret_error {
-				InterpretError::InvalidOperation { message, line } => {
-					println!("[:{}] Invalid operation: {}", line, message);
-				}
-				_ => println!("Compile error")
-			}
+			print_interpret_error(&interpret_error);
 			return interpret_error.to_exit_code();
 		}
 		buffer.clear();
@@ -72,4 +67,15 @@ fn interpret<const N: usize>(vm: &mut VM<N>, source: &str) -> Result<(), Interpr
 			Err(InterpretError::Compile)
 		}
 	}
+}
+
+fn print_interpret_error(error: &InterpretError) {
+	match error {
+		InterpretError::BadChunk => println!("Error: bad chunk"),
+		InterpretError::UnknownOpcode(opcode) => println!("Error: unknown opcode '{:#04X?}'", opcode),
+		InterpretError::InvalidOperation { message, line } => {
+			println!("[:{}] Invalid operation: {}", line, message);
+		}
+		_ => println!("Compile error")
+	};
 }
