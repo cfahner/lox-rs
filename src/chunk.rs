@@ -49,6 +49,14 @@ impl Chunk {
 		self.lines.add(line);
 	}
 
+	pub fn write_last_line(&mut self, byte: u8) {
+		self.code.push(byte);
+		self.lines.add(match self.lines.last() {
+			Some(line) => *line,
+			None => 0
+		})
+	}
+
 	/// Writes a constant value into the chunk: either [Op::Constant] followed by a one byte index or
 	/// [Op::ConstantLong] followed by a three byte index
 	pub fn write_constant(&mut self, value: Value, line: u32) {
