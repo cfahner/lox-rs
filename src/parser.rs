@@ -85,13 +85,13 @@ impl fmt::Display for ParseError {
 
 }
 
-fn binary_op_from_token(token: &Token) -> Option<BinaryOp> {
-	match token.kind {
-		TokenKind::Plus => Some(BinaryOp::Add),
-		TokenKind::Minus => Some(BinaryOp::Subtract),
-		TokenKind::Star => Some(BinaryOp::Multiply),
-		TokenKind::Slash => Some(BinaryOp::Divide),
-		_ => None
+fn binary_op_from_token_kind(kind: &TokenKind) -> BinaryOp {
+	match kind {
+		TokenKind::Plus => BinaryOp::Add,
+		TokenKind::Minus => BinaryOp::Subtract,
+		TokenKind::Star => BinaryOp::Multiply,
+		TokenKind::Slash => BinaryOp::Divide,
+		_ => panic!("Could not convert token kind to binary op")
 	}
 }
 
@@ -128,14 +128,9 @@ impl<'src> StmtIterator<'src> {
 		let precedence = Precedence::from_infix_token_kind(&operator.kind);
 		let right = self.parse_precedence(precedence.next())?;
 
-		let Some(binary_op) = binary_op_from_token(&operator) else {
-			let msg = format!("Expected binary operator, not `{}`", &operator.content);
-			return Err(ParseError::new_at_token(&operator, &msg));
-		};
-
 		Ok(Expr::Binary {
 			lhs: Box::new(left),
-			op: binary_op,
+			op: binary_op_from_token_kind(&operator.kind),
 			rhs: Box::new(right),
 			line: operator.line,
 		})
