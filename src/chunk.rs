@@ -49,6 +49,11 @@ impl Chunk {
 		self.lines.add(line);
 	}
 
+	pub fn write_twice(&mut self, byte1: u8, byte2: u8, line: u32) {
+		self.write(byte1, line);
+		self.write(byte2, line);
+	}
+
 	pub fn write_last_line(&mut self, byte: u8) {
 		self.code.push(byte);
 		self.lines.add(match self.lines.last() {
@@ -125,6 +130,19 @@ mod tests {
 		let chunk = Chunk::new();
 
 		assert!(chunk.find_line(0).is_none());
+	}
+
+	#[test]
+	fn write_twice_should_write_two_bytes_for_the_same_line() {
+		let mut chunk = Chunk::new();
+		let expected_line = 25;
+
+		chunk.write_twice(OP_TRUE, OP_NOT, expected_line);
+
+		assert_eq!([
+			chunk.find_line(0).unwrap(),
+			chunk.find_line(1).unwrap()
+		], [ expected_line, expected_line ]);
 	}
 
 }
