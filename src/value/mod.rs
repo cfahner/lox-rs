@@ -1,16 +1,29 @@
 use std::fmt;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub enum Value {
 	Nil,
 	Bool(bool),
 	Number(f64),
+	String(Rc<str>),
 }
 
 impl Value {
 
+	pub fn new_concatenated_string(str1: &str, str2: &str) -> Self {
+		let mut result = str1.to_owned();
+		result.push_str(str2);
+		Self::String(Rc::from(result))
+	}
+
 	pub fn clone(&self) -> Self {
-		unsafe { std::mem::transmute_copy(self) }
+		match self {
+			Value::String(rc) => Value::String(rc.clone()),
+			// none of the remaining variants have associated data that is heap allocated
+			// Safety: cloning self into Self, no other way to interpret the bits
+			_ => unsafe { std::mem::transmute_copy(self) }
+		}
 	}
 
 	pub fn is_falsey(&self) -> bool {
@@ -21,11 +34,16 @@ impl Value {
 		}
 	}
 
-	pub fn equals(&self, other: &Self) -> bool {
+}
+
+impl PartialEq for Value {
+
+	fn eq(&self, other: &Self) -> bool {
 		match (self, other) {
 			(Value::Nil, Value::Nil) => true,
 			(Value::Bool(bool1), Value::Bool(bool2)) => bool1 == bool2,
 			(Value::Number(num1), Value::Number(num2)) => num1 == num2,
+			(Value::String(str1), Value::String(str2)) => str1 == str2,
 			_ => false
 		}
 	}
@@ -39,6 +57,7 @@ impl fmt::Display for Value {
 			Value::Nil => write!(f, "nil"),
 			Value::Bool(bool_val) => write!(f, "{}", bool_val),
 			Value::Number(num_val) => write!(f, "{}", num_val),
+			Value::String(str_val) => write!(f, "{}", str_val),
 		}
 	}
 
@@ -98,7 +117,7 @@ mod tests {
 	}
 
 	#[test]
-	fn equals_should_return_expected_result() {
+	fn eq_should_return_expected_result() {
 		let cases = [
 			(Value::Nil, Value::Nil, true),
 			(Value::Bool(true), Value::Bool(true), true),
@@ -110,7 +129,7 @@ mod tests {
 		];
 
 		for (a, b, expected_result) in cases {
-			let result = a.equals(&b);
+			let result = a == b;
 
 			assert_eq!(expected_result, result);
 		}

@@ -146,6 +146,7 @@ impl<'src> StmtIterator<'src> {
 
 	fn parse_prefix(&mut self, token: Token) -> Result<Expr, ParseError> {
 		match token.kind {
+			TokenKind::String => Ok(Expr::String(token.content[1..=token.content.len()-2].to_owned())),
 			TokenKind::Number => match token.content.parse::<f64>() {
 				Ok(number) => Ok(Expr::Number { number, line: token.line }),
 				_ => Err(ParseError::new_at_token(&token, "Expected valid number."))

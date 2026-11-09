@@ -5,6 +5,7 @@ use sysexits::ExitCode;
 use crate::chunk::Chunk;
 use crate::op::*;
 use crate::value::Value;
+use crate::stack::Stack;
 
 /// Possible error cases during chunk interpreting
 #[derive(Debug, PartialEq)]
@@ -40,22 +41,17 @@ impl InterpretError {
 
 pub struct VM<const N_STACK_SIZE: usize> {
 
-	stack: [Value;N_STACK_SIZE],
-
-	stack_top: *mut Value,
+	stack: Stack<N_STACK_SIZE>,
 
 }
 
 impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 
 	pub fn new() -> Self {
-		Self { stack: [const { Value::Nil };N_STACK_SIZE], stack_top: std::ptr::null_mut() }
+		Self { stack: Stack::<N_STACK_SIZE>::new() }
 	}
 
 	pub fn interpret(&mut self, chunk: &Chunk) -> Result<(), InterpretError> {
-		if self.stack_top.is_null() {
-			self.stack_top = self.stack.as_mut_ptr();
-		}
 		// apparently dereferencing raw pointers is faster than indexing a vector, so setting up pointers
 		let ptr_range = chunk.get_code_pointer_range();
 		// if range is empty, the first iteration of the loop would trigger undefined behavior
@@ -89,13 +85,13 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 				OP_NIL => self.op_push_literal(Value::Nil),
 				OP_TRUE => self.op_push_literal(Value::Bool(true)),
 				OP_FALSE => self.op_push_literal(Value::Bool(false)),
-				OP_EQUAL => self.op_equal(),
-				OP_NOT_EQUAL => self.op_not_equal(),
+				OP_EQUAL => self.op_binary(|l, r| Value::Bool(l == r)),
+				OP_NOT_EQUAL => self.op_binary(|l, r| Value::Bool(l != r)),
 				OP_GREATER => self.op_binary_numeric(|l, r| Value::Bool(l > r)),
 				OP_GREATER_EQUAL => self.op_binary_numeric(|l, r| Value::Bool(l >= r)),
 				OP_LESS => self.op_binary_numeric(|l, r| Value::Bool(l < r)),
 				OP_LESS_EQUAL => self.op_binary_numeric(|l, r| Value::Bool(l <= r)),
-				OP_ADD => self.op_binary_numeric(|l, r| Value::Number(l + r)),
+				OP_ADD => self.op_add(),
 				OP_SUBTRACT => self.op_binary_numeric(|l, r| Value::Number(l - r)),
 				OP_MULTIPLY => self.op_binary_numeric(|l, r| Value::Number(l * r)),
 				OP_DIVIDE => self.op_binary_numeric(|l, r| Value::Number(l / r)),
@@ -126,33 +122,37 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 	fn op_constant(&mut self, chunk: &Chunk, ptr: *const u8) -> Result<(), &str> {
 		// Safety: run() loop has already checked safety of ptr
 		let const_id = unsafe { *ptr.add(1) };
-		self.stack_push(chunk.get_constant(const_id as usize).clone());
+		self.stack.push(chunk.get_constant(const_id as usize).clone());
 		Ok(())
 	}
 
 	#[inline]
 	fn op_push_literal(&mut self, value: Value) -> Result<(), &str> {
-		self.stack_push(value);
+		self.stack.push(value);
 		Ok(())
 	}
 
 	#[inline]
-	fn op_equal(&mut self) -> Result<(), &str> {
-		self.stack_replace_top_2::<&str>(|l, r| {
-			Ok(Value::Bool(l.equals(r)))
+	fn op_add(&mut self) -> Result<(), &str> {
+		self.stack.replace_two_or_err(|l, r| match (l, r) {
+			(Value::Number(l_num), Value::Number(r_num)) => {
+				Ok(Value::Number(*l_num + *r_num))
+			},
+			(Value::String(l_str), Value::String(r_str)) => {
+				Ok(Value::new_concatenated_string(l_str, r_str))
+			},
+			_ => Err("Operands must be two numbers or two strings.")
 		})
 	}
 
 	#[inline]
-	fn op_not_equal(&mut self) -> Result<(), &str> {
-		self.stack_replace_top_2::<&str>(|l, r| {
-			Ok(Value::Bool(!l.equals(r)))
-		})
+	fn op_binary(&mut self, action: impl FnOnce(&Value, &Value) -> Value) -> Result<(), &str> {
+		self.stack.replace_two_or_err::<&str>(|l, r| Ok(action(l, r)))
 	}
 
 	#[inline]
 	fn op_binary_numeric(&mut self, operate: impl FnOnce(f64, f64) -> Value) -> Result<(), &str> {
-		self.stack_replace_top_2(|l, r| {
+		self.stack.replace_two_or_err(|l, r| {
 			match (l, r) {
 				(Value::Number(l_num), Value::Number(r_num)) => {
 					Ok(operate(*l_num, *r_num))
@@ -164,12 +164,12 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 
 	#[inline]
 	fn op_not(&mut self) -> Result<(), &str> {
-		self.stack_replace_top::<&str>(|v| Ok(Value::Bool(v.is_falsey())))
+		self.stack.replace_or_err::<&str>(|v| Ok(Value::Bool(v.is_falsey())))
 	}
 
 	#[inline]
 	fn op_negate(&mut self) -> Result<(), &str> {
-		self.stack_replace_top(|v| {
+		self.stack.replace_or_err(|v| {
 			match v {
 				Value::Number(num) => Ok(Value::Number(-num)),
 				_ => Err("Operand must be a number.")
@@ -179,7 +179,7 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 
 	#[inline]
 	fn op_return(&mut self) -> Result<(), &str> {
-		println!("{}", self.stack_pop());
+		println!("{}", self.stack.pop());
 		Ok(())
 	}
 
@@ -188,61 +188,8 @@ impl<const N_STACK_SIZE: usize> VM<N_STACK_SIZE> {
 		// Safety: run() loop has already checked safety of ptr
 		let const_id_bytes: [u8;4] = unsafe { [ 0, *ptr.add(1), *ptr.add(2), *ptr.add(3) ] };
 		let const_id = u32::from_be_bytes(const_id_bytes);
-		self.stack_push(chunk.get_constant(const_id as usize).clone());
+		self.stack.push(chunk.get_constant(const_id as usize).clone());
 		Ok(())
-	}
-
-	#[inline]
-	fn stack_push(&mut self, value: Value) {
-		if self.stack_top.cast_const() >= self.stack.as_ptr_range().end {
-			panic!("Stack overflow");
-		}
-		unsafe {
-			*self.stack_top = value;
-			self.stack_top = self.stack_top.add(1);
-		}
-	}
-
-	#[inline]
-	fn stack_pop(&mut self) -> &mut Value {
-		self.ensure_stack_filled();
-
-		// Safety: already checked against the floor position above
-		unsafe {
-			self.stack_top = self.stack_top.offset(-1);
-			&mut *self.stack_top
-		}
-	}
-
-	#[inline]
-	fn stack_replace_top_2<TErr>(&mut self, replacer: impl FnOnce(&Value, &Value) -> Result<Value, TErr>) -> Result<(), TErr> {
-		self.ensure_stack_filled();
-
-		// Safety: ensure_stack_filled() does the safety check
-		unsafe {
-			let new_value = replacer(&*self.stack_top.offset(-2), &*self.stack_top.offset(-1))?;
-			self.stack_top = self.stack_top.offset(-1);
-			*self.stack_top.offset(-1) = new_value;
-			Ok(())
-		}
-	}
-
-	#[inline]
-	fn stack_replace_top<TErr>(&mut self, replacer: impl FnOnce(&Value) -> Result<Value, TErr>) -> Result<(), TErr> {
-		self.ensure_stack_filled();
-
-		// Safety: ensure_stack_filled() does the safety check
-		unsafe {
-			*self.stack_top.offset(-1) = replacer(&*self.stack_top.offset(-1))?;
-			Ok(())
-		}
-	}
-
-	#[inline]
-	fn ensure_stack_filled(&self) {
-		if self.stack_top as *const Value == self.stack.as_ptr() {
-			panic!("Stack underflow");
-		}
 	}
 
 	#[cfg(feature = "trace")]
@@ -303,6 +250,17 @@ mod tests {
 	fn interpret_should_panic_when_negating_empty_stack() {
 		let mut chunk = Chunk::new();
 		chunk.write(OP_NEGATE, 1);
+		let mut sut = VM::<8>::new();
+
+		let _ = sut.interpret(&chunk);
+	}
+
+	#[test]
+	fn interpret_should_not_trigger_double_free_from_string_constants() {
+		let mut chunk = Chunk::new();
+		chunk.write_constant(Value::String(std::rc::Rc::from("a")), 0);
+		chunk.write_constant(Value::String(std::rc::Rc::from("b")), 0);
+		chunk.write(OP_ADD, 0);
 		let mut sut = VM::<8>::new();
 
 		let _ = sut.interpret(&chunk);

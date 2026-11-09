@@ -9,6 +9,7 @@ mod parser;
 mod scanner;
 mod value;
 mod vm;
+mod stack;
 
 use std::io::Write;
 

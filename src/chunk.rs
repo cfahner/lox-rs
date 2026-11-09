@@ -54,14 +54,6 @@ impl Chunk {
 		self.write(byte2, line);
 	}
 
-	pub fn write_last_line(&mut self, byte: u8) {
-		self.code.push(byte);
-		self.lines.add(match self.lines.last() {
-			Some(line) => *line,
-			None => 0
-		})
-	}
-
 	/// Writes a constant value into the chunk: either [Op::Constant] followed by a one byte index or
 	/// [Op::ConstantLong] followed by a three byte index
 	pub fn write_constant(&mut self, value: Value, line: u32) {
@@ -85,6 +77,13 @@ impl Chunk {
 	/// Returns the constant associated with the given "constant id", panics if it doesn't exist
 	pub fn get_constant(&self, const_id: usize) -> &Value {
 		&self.constants.values[const_id]
+	}
+
+	pub fn last_line(&self) -> u32 {
+		match self.lines.last() {
+			Some(line) => *line,
+			None => 0
+		}
 	}
 
 }

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::ast::BinaryOp;
 use crate::ast::Expr;
 use crate::ast::UnaryOp;
@@ -22,10 +24,11 @@ pub fn compile(source: &str) -> Result<Chunk, ParseError> {
 
 fn compile_expr(chunk: &mut Chunk, stmt: &Expr) {
 	match stmt {
+		Expr::String(string) => chunk.write_constant(Value::String(Rc::from(string.clone())), chunk.last_line()),
 		Expr::Number { number, line } => chunk.write_constant(Value::Number(*number), *line),
-		Expr::Nil => chunk.write_last_line(OP_NIL),
-		Expr::True => chunk.write_last_line(OP_TRUE),
-		Expr::False => chunk.write_last_line(OP_FALSE),
+		Expr::Nil => chunk.write(OP_NIL, chunk.last_line()),
+		Expr::True => chunk.write(OP_TRUE, chunk.last_line()),
+		Expr::False => chunk.write(OP_FALSE, chunk.last_line()),
 		Expr::Unary { op, expr, line } => match op {
 			UnaryOp::Negate => {
 				compile_expr(chunk, &*expr);
